@@ -473,12 +473,13 @@ export async function fetchAccessListData(
 // --- Auth Actions ---
 
 export async function getSignupStatus() {
+    cookies(); // Makes the function dynamic and prevents caching.
     try {
         await connectDB();
         const signupSetting = await Setting.findOne({ key: 'signupEnabled' });
-        // Use !! to coerce to boolean. Defaults to false if not found, which is safer.
-        // The seeder sets the initial value to true.
-        return { signupEnabled: !!signupSetting?.value };
+        // If setting is not found (null/undefined), default to true (initial state).
+        // Otherwise, check if it's not explicitly false.
+        return { signupEnabled: signupSetting?.value !== false };
     } catch (error) {
         console.error("Error fetching signup status:", error);
         // Default to false on error for security.
@@ -615,7 +616,7 @@ export async function updateUserProfile(userId: string, values: z.infer<typeof u
         }
 
         const emailChangeEnabledSetting = await Setting.findOne({ key: 'emailChangeEnabled' });
-        const emailChangeEnabled = emailChangeEnabledSetting?.value ?? true;
+        const emailChangeEnabled = emailChangeEnabledSetting?.value !== false;
 
         if (user.email !== values.email && !emailChangeEnabled) {
             return { error: 'Email address cannot be changed at this time.' };
@@ -659,6 +660,7 @@ export async function updateUserProfile(userId: string, values: z.infer<typeof u
 
 // --- Public Site Settings ---
 export async function getPublicSettings(): Promise<PublicSettings> {
+    cookies(); // Makes the function dynamic and prevents caching.
     try {
         await connectDB();
         const settings = await Setting.find({});
@@ -669,8 +671,8 @@ export async function getPublicSettings(): Promise<PublicSettings> {
 
         return {
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
-            signupEnabled: !!settingsMap.signupEnabled,
-            emailChangeEnabled: settingsMap.emailChangeEnabled === undefined ? true : settingsMap.emailChangeEnabled === true,
+            signupEnabled: settingsMap.signupEnabled !== false,
+            emailChangeEnabled: settingsMap.emailChangeEnabled !== false,
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
             colorPrimary: settingsMap.colorPrimary ?? '217.2 91.2% 59.8%',
             colorBackground: settingsMap.colorBackground ?? '0 0% 100%',
@@ -729,6 +731,7 @@ async function testProxy(proxy: ProxySettings): Promise<boolean> {
 }
 
 export async function getAdminSettings(): Promise<Partial<AdminSettings> & { error?: string, defaults?: any }> {
+    cookies(); // Makes the function dynamic and prevents caching.
     try {
         await connectDB();
         const settings = await Setting.find({});
@@ -751,10 +754,10 @@ export async function getAdminSettings(): Promise<Partial<AdminSettings> & { err
                 username: safeProxySettings.username || '',
                 password: safeProxySettings.password || '',
             },
-            signupEnabled: !!settingsMap.signupEnabled,
+            signupEnabled: settingsMap.signupEnabled !== false,
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
-            emailChangeEnabled: settingsMap.emailChangeEnabled === undefined ? true : settingsMap.emailChangeEnabled === true,
+            emailChangeEnabled: settingsMap.emailChangeEnabled !== false,
             numberList: settingsMap.numberList ?? [],
             errorMappings: settingsMap.errorMappings ?? [],
             
