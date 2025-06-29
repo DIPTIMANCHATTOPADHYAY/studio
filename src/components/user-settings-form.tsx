@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { updateUserProfile } from '@/app/actions';
 import type { UserProfile } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
-import { CardFooter } from './ui/card';
+import { CardContent, CardFooter } from './ui/card';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -52,8 +52,8 @@ export function UserSettingsForm({ user, emailChangeEnabled }: UserSettingsFormP
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <CardContent className="space-y-6">
             <FormField
             control={form.control}
             name="name"
@@ -83,14 +83,12 @@ export function UserSettingsForm({ user, emailChangeEnabled }: UserSettingsFormP
                 </FormItem>
             )}
             />
-        </div>
-        <CardFooter className="border-t px-0 py-4 -mx-0 -mb-6">
-            <div className="flex justify-end w-full">
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                </Button>
-            </div>
+        </CardContent>
+        <CardFooter className="flex justify-end">
+            <Button type="submit" disabled={isLoading}>
+                {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+            </Button>
         </CardFooter>
       </form>
     </Form>

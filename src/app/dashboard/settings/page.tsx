@@ -1,6 +1,6 @@
 import { getPublicSettings, getCurrentUser } from "@/app/actions";
 import { UserSettingsForm } from "@/components/user-settings-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
@@ -27,9 +27,7 @@ export default async function SettingsPage() {
                         This information will be used for your account. Make sure it's up to date.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                   <UserSettingsForm user={user} emailChangeEnabled={emailChangeEnabled} />
-                </CardContent>
+                <UserSettingsForm user={user} emailChangeEnabled={emailChangeEnabled} />
             </Card>
         </div>
     )

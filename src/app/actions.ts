@@ -12,6 +12,7 @@ import type { FilterFormValues, SmsRecord, UserProfile, ProxySettings, Extracted
 import { allColorKeys } from '@/lib/types';
 import { redirect } from 'next/navigation';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { revalidatePath } from 'next/cache';
 
 const filterSchema = z.object({
   startDate: z.date(),
@@ -73,6 +74,77 @@ async function getErrorMappings(): Promise<Record<string, string>> {
     }
 }
 
+async function handleApiError(response: Response): Promise<{ error: string }> {
+    const errorText = await response.text();
+    try {
+        const jsonError = JSON.parse(errorText);
+        if (jsonError.error) {
+            const reasonCode = jsonError.error.reason_code;
+            if (reasonCode) {
+                const errorMap = await getErrorMappings();
+                const customMessage = errorMap[reasonCode];
+                if (customMessage) {
+                    return { error: customMessage };
+                }
+            }
+            return { error: `API Error: ${jsonError.error.message}` };
+        }
+    } catch (e) {
+        // Ignore parsing error, return raw text
+    }
+    return { error: `API Error: ${response.status} ${response.statusText}. ${errorText}` };
+}
+
+// A robust CSV parser that handles newlines and semicolons inside message content.
+function parseCsvWithQuotes(input: string): string[][] {
+    const rows: string[][] = [];
+    let inQuotes = false;
+    let row: string[] = [];
+    let field = '';
+    const text = input.trim();
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+
+        if (inQuotes) {
+            if (char === '"') {
+                if (i + 1 < text.length && text[i + 1] === '"') {
+                    field += '"';
+                    i++; // Skip the next quote (escaped quote)
+                } else {
+                    inQuotes = false;
+                }
+            } else {
+                field += char;
+            }
+        } else {
+            if (char === '"') {
+                inQuotes = true;
+            } else if (char === ';') {
+                row.push(field);
+                field = '';
+            } else if (char === '\n' || char === '\r') {
+                row.push(field);
+                rows.push(row);
+                row = [];
+                field = '';
+                if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
+                    i++; // Handle CRLF
+                }
+            } else {
+                field += char;
+            }
+        }
+    }
+
+    // Add the last field and row if the file doesn't end with a newline
+    if (field || row.length > 0) {
+        row.push(field);
+        rows.push(row);
+    }
+
+    return rows.filter(r => r.length > 1 || (r.length === 1 && r[0]));
+};
 
 export async function fetchSmsData(
   filter: FilterFormValues
@@ -119,23 +191,7 @@ export async function fetchSmsData(
     });
 
     if (!response.ok) {
-       const errorText = await response.text();
-        try {
-            const jsonError = JSON.parse(errorText);
-            if (jsonError.error) {
-                const reasonCode = jsonError.error.reason_code;
-                if (reasonCode) {
-                    const errorMap = await getErrorMappings();
-                    const customMessage = errorMap[reasonCode];
-                    if (customMessage) {
-                        return { error: customMessage };
-                    }
-                }
-                return { error: `API Error: ${jsonError.error.message}` };
-            }
-        } catch (e) {
-        }
-      return { error: `API Error: ${response.status} ${response.statusText}. ${errorText}` };
+        return handleApiError(response);
     }
 
     const csvText = await response.text();
@@ -144,73 +200,8 @@ export async function fetchSmsData(
     }
     
     if (csvText.trim().startsWith('{')) {
-        try {
-            const jsonError = JSON.parse(csvText);
-            if (jsonError.error) {
-                const reasonCode = jsonError.error.reason_code;
-                 if (reasonCode) {
-                    const errorMap = await getErrorMappings();
-                    const customMessage = errorMap[reasonCode];
-                    if (customMessage) {
-                        return { error: customMessage };
-                    }
-                }
-                return { error: `API returned an error: ${jsonError.error.message}` };
-            }
-        } catch (e) {
-        }
+        return handleApiError(response);
     }
-
-    // A robust CSV parser that handles newlines and semicolons inside message content.
-    const parseCsvWithQuotes = (input: string): string[][] => {
-        const rows: string[][] = [];
-        let inQuotes = false;
-        let row: string[] = [];
-        let field = '';
-        const text = input.trim();
-
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-
-            if (inQuotes) {
-                if (char === '"') {
-                    if (i + 1 < text.length && text[i + 1] === '"') {
-                        field += '"';
-                        i++; // Skip the next quote (escaped quote)
-                    } else {
-                        inQuotes = false;
-                    }
-                } else {
-                    field += char;
-                }
-            } else {
-                if (char === '"') {
-                    inQuotes = true;
-                } else if (char === ';') {
-                    row.push(field);
-                    field = '';
-                } else if (char === '\n' || char === '\r') {
-                    row.push(field);
-                    rows.push(row);
-                    row = [];
-                    field = '';
-                    if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-                        i++; // Handle CRLF
-                    }
-                } else {
-                    field += char;
-                }
-            }
-        }
-
-        // Add the last field and row if the file doesn't end with a newline
-        if (field || row.length > 0) {
-            row.push(field);
-            rows.push(row);
-        }
-
-        return rows.filter(r => r.length > 1 || (r.length === 1 && r[0]));
-    };
     
     const allRows = parseCsvWithQuotes(csvText);
 
@@ -328,23 +319,7 @@ export async function fetchAccessListData(
     });
 
     if (!response.ok) {
-       const errorText = await response.text();
-        try {
-            const jsonError = JSON.parse(errorText);
-            if (jsonError.error) {
-                const reasonCode = jsonError.error.reason_code;
-                if (reasonCode) {
-                    const errorMap = await getErrorMappings();
-                    const customMessage = errorMap[reasonCode];
-                    if (customMessage) {
-                        return { error: customMessage };
-                    }
-                }
-                return { error: `API Error: ${jsonError.error.message}` };
-            }
-        } catch (e) {
-        }
-      return { error: `API Error: ${response.status} ${response.statusText}. ${errorText}` };
+       return handleApiError(response);
     }
 
     const csvText = await response.text();
@@ -353,71 +328,9 @@ export async function fetchAccessListData(
     }
     
     if (csvText.trim().startsWith('{')) {
-        try {
-            const jsonError = JSON.parse(csvText);
-            if (jsonError.error) {
-                const reasonCode = jsonError.error.reason_code;
-                 if (reasonCode) {
-                    const errorMap = await getErrorMappings();
-                    const customMessage = errorMap[reasonCode];
-                    if (customMessage) {
-                        return { error: customMessage };
-                    }
-                }
-                return { error: `API returned an error: ${jsonError.error.message}` };
-            }
-        } catch (e) {
-        }
+        return handleApiError(response);
     }
 
-    const parseCsvWithQuotes = (input: string): string[][] => {
-        const rows: string[][] = [];
-        let inQuotes = false;
-        let row: string[] = [];
-        let field = '';
-        const text = input.trim();
-
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            if (inQuotes) {
-                if (char === '"') {
-                    if (i + 1 < text.length && text[i + 1] === '"') {
-                        field += '"';
-                        i++; 
-                    } else {
-                        inQuotes = false;
-                    }
-                } else {
-                    field += char;
-                }
-            } else {
-                if (char === '"') {
-                    inQuotes = true;
-                } else if (char === ';') {
-                    row.push(field);
-                    field = '';
-                } else if (char === '\n' || char === '\r') {
-                    row.push(field);
-                    rows.push(row);
-                    row = [];
-                    field = '';
-                    if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-                        i++;
-                    }
-                } else {
-                    field += char;
-                }
-            }
-        }
-
-        if (field || row.length > 0) {
-            row.push(field);
-            rows.push(row);
-        }
-
-        return rows.filter(r => r.length > 1 || (r.length === 1 && r[0]));
-    };
-    
     const allRows = parseCsvWithQuotes(csvText);
 
     if (allRows.length < 2) {
@@ -473,13 +386,11 @@ export async function fetchAccessListData(
 // --- Auth Actions ---
 
 export async function getSignupStatus() {
-    cookies(); // Makes the function dynamic and prevents caching.
     try {
         await connectDB();
         const signupSetting = await Setting.findOne({ key: 'signupEnabled' });
-        // If setting is not found (null/undefined), default to true (initial state).
-        // Otherwise, check if it's not explicitly false.
-        return { signupEnabled: signupSetting?.value !== false };
+        // Be explicit: only if the value is exactly `true` is it enabled.
+        return { signupEnabled: signupSetting?.value === true };
     } catch (error) {
         console.error("Error fetching signup status:", error);
         // Default to false on error for security.
@@ -659,19 +570,24 @@ export async function updateUserProfile(userId: string, values: z.infer<typeof u
 
 
 // --- Public Site Settings ---
+async function getAllSettingsAsMap(): Promise<{ [key: string]: any }> {
+    await connectDB();
+    const settings = await Setting.find({});
+    const settingsMap = settings.reduce((acc, setting) => {
+        acc[setting.key] = setting.value;
+        return acc;
+    }, {} as { [key: string]: any });
+    return settingsMap;
+}
+
+
 export async function getPublicSettings(): Promise<PublicSettings> {
-    cookies(); // Makes the function dynamic and prevents caching.
     try {
-        await connectDB();
-        const settings = await Setting.find({});
-        const settingsMap = settings.reduce((acc, setting) => {
-            acc[setting.key] = setting.value;
-            return acc;
-        }, {} as { [key: string]: any });
+        const settingsMap = await getAllSettingsAsMap();
 
         return {
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
-            signupEnabled: settingsMap.signupEnabled !== false,
+            signupEnabled: settingsMap.signupEnabled === true,
             emailChangeEnabled: settingsMap.emailChangeEnabled !== false,
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
             colorPrimary: settingsMap.colorPrimary ?? '217.2 91.2% 59.8%',
@@ -731,14 +647,8 @@ async function testProxy(proxy: ProxySettings): Promise<boolean> {
 }
 
 export async function getAdminSettings(): Promise<Partial<AdminSettings> & { error?: string, defaults?: any }> {
-    cookies(); // Makes the function dynamic and prevents caching.
     try {
-        await connectDB();
-        const settings = await Setting.find({});
-        const settingsMap = settings.reduce((acc, setting) => {
-            acc[setting.key] = setting.value;
-            return acc;
-        }, {} as { [key: string]: any });
+        const settingsMap = await getAllSettingsAsMap();
 
         const defaultProxy = { ip: '', port: '', username: '', password: '' };
         const rawProxy = settingsMap.proxySettings;
@@ -754,7 +664,7 @@ export async function getAdminSettings(): Promise<Partial<AdminSettings> & { err
                 username: safeProxySettings.username || '',
                 password: safeProxySettings.password || '',
             },
-            signupEnabled: settingsMap.signupEnabled !== false,
+            signupEnabled: settingsMap.signupEnabled === true,
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
             emailChangeEnabled: settingsMap.emailChangeEnabled !== false,
@@ -818,6 +728,20 @@ export async function updateAdminSettings(settings: Partial<AdminSettings>) {
         }
 
         await Promise.all(operations);
+        
+        // Revalidate paths that depend on these settings
+        if (settings.signupEnabled !== undefined) {
+            revalidatePath('/signup');
+            revalidatePath('/');
+        }
+        if (settings.siteName !== undefined || settings.footerText !== undefined) {
+            revalidatePath('/');
+        }
+        if (Object.keys(settings).some(k => k.startsWith('color'))) {
+            revalidatePath('/', 'layout');
+        }
+
+
         return { success: true };
     } catch (error) {
         return { error: (error as Error).message };
