@@ -476,7 +476,10 @@ export async function getSignupStatus() {
     try {
         await connectDB();
         const signupSetting = await Setting.findOne({ key: 'signupEnabled' });
-        return { signupEnabled: signupSetting?.value ?? true };
+        // If the setting document doesn't exist or is undefined, default to true.
+        // Otherwise, check if its value is strictly true.
+        const isEnabled = signupSetting === null || signupSetting.value === undefined ? true : signupSetting.value === true;
+        return { signupEnabled: isEnabled };
     } catch (error) {
         return { signupEnabled: true };
     }
@@ -665,8 +668,8 @@ export async function getPublicSettings(): Promise<PublicSettings> {
 
         return {
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
-            signupEnabled: settingsMap.signupEnabled ?? true,
-            emailChangeEnabled: settingsMap.emailChangeEnabled ?? true,
+            signupEnabled: settingsMap.signupEnabled === undefined ? true : settingsMap.signupEnabled === true,
+            emailChangeEnabled: settingsMap.emailChangeEnabled === undefined ? true : settingsMap.emailChangeEnabled === true,
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
             colorPrimary: settingsMap.colorPrimary ?? '217.2 91.2% 59.8%',
             colorBackground: settingsMap.colorBackground ?? '0 0% 100%',
@@ -747,10 +750,10 @@ export async function getAdminSettings(): Promise<Partial<AdminSettings> & { err
                 username: safeProxySettings.username || '',
                 password: safeProxySettings.password || '',
             },
-            signupEnabled: settingsMap.signupEnabled ?? true,
+            signupEnabled: settingsMap.signupEnabled === undefined ? true : settingsMap.signupEnabled === true,
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
-            emailChangeEnabled: settingsMap.emailChangeEnabled ?? true,
+            emailChangeEnabled: settingsMap.emailChangeEnabled === undefined ? true : settingsMap.emailChangeEnabled === true,
             numberList: settingsMap.numberList ?? [],
             errorMappings: settingsMap.errorMappings ?? [],
             
