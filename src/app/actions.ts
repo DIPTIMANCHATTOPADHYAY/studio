@@ -385,10 +385,21 @@ export async function fetchAccessListData(
 
 // --- Auth Actions ---
 
+function setAuthCookie(token: string) {
+    cookies().set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP !== 'true',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24, // 1 day
+      path: '/',
+    });
+}
+
 export async function getSignupStatus() {
     try {
         await connectDB();
-        const signupSetting = await Setting.findOne({ key: 'signupEnabled' });
+        // Use fetch with no-cache option to ensure we get the latest value
+        const signupSetting = await Setting.findOne({ key: 'signupEnabled' }).lean().exec();
         // Be explicit: only if the value is exactly `true` is it enabled.
         return { signupEnabled: signupSetting?.value === true };
     } catch (error) {
@@ -461,13 +472,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
       { expiresIn: '1d' }
     );
     
-    cookies().set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP !== 'true',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24, // 1 day
-      path: '/',
-    });
+    setAuthCookie(token);
 
     return { success: true };
   } catch (error) {
@@ -553,13 +558,7 @@ export async function updateUserProfile(userId: string, values: z.infer<typeof u
           { expiresIn: '1d' }
         );
 
-        cookies().set('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP !== 'true',
-            sameSite: 'strict',
-            maxAge: 60 * 60 * 24, // 1 day
-            path: '/',
-        });
+        setAuthCookie(token);
 
         return { success: true };
     } catch (error) {
@@ -572,7 +571,7 @@ export async function updateUserProfile(userId: string, values: z.infer<typeof u
 // --- Public Site Settings ---
 async function getAllSettingsAsMap(): Promise<{ [key: string]: any }> {
     await connectDB();
-    const settings = await Setting.find({});
+    const settings = await Setting.find({}).lean();
     const settingsMap = settings.reduce((acc, setting) => {
         acc[setting.key] = setting.value;
         return acc;
@@ -772,6 +771,7 @@ export async function toggleUserStatus(id: string, status: 'active' | 'blocked')
     try {
         await connectDB();
         await User.findByIdAndUpdate(id, { status });
+        revalidatePath('/admin');
         return { success: true };
     } catch (error) {
         return { error: (error as Error).message };
@@ -786,8 +786,12 @@ const adminLoginSchema = z.object({
 });
 
 export async function adminLogin(values: z.infer<typeof adminLoginSchema>) {
-  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminUsername || !adminPassword) {
+      return { error: 'Admin credentials are not configured on the server. Please contact the system administrator.' };
+  }
 
   if (values.username === adminUsername && values.password === adminPassword) {
     cookies().set('admin_session', 'true', {
@@ -868,9 +872,12 @@ export async function addPrivateNumbersToUser(userId: string, numbers: string): 
 
         const updatedUser = await User.findById(userId);
 
+        revalidatePath('/admin');
         return { success: true, addedCount: uniqueNewNumbers.length, newList: updatedUser?.privateNumberList ?? [] };
 
     } catch (error) {
         return { error: (error as Error).message };
     }
 }
+
+    

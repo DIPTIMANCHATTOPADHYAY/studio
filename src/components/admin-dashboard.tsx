@@ -1,6 +1,6 @@
+
 'use client'
 
-import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, MoreVertical, LayoutGrid, Palette } from 'lucide-react';
 import { adminLogout } from '@/app/actions';
@@ -21,11 +21,9 @@ import { AppearanceTab } from './admin/appearance-tab';
 
 
 export function AdminDashboard() {
-    const logoutFormRef = useRef<HTMLFormElement>(null);
 
     return (
         <main className="min-h-screen w-full bg-background p-4 sm:p-6 lg:p-8">
-            <form ref={logoutFormRef} action={adminLogout} className="hidden" />
             <div className="max-w-7xl mx-auto">
                 <div className="mb-6 flex flex-row justify-between items-center">
                     <div>
@@ -63,7 +61,7 @@ export function AdminDashboard() {
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                 <DropdownMenuItem onClick={() => logoutFormRef.current?.requestSubmit()}>
+                                 <DropdownMenuItem onClick={async () => await adminLogout()}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Admin Logout</span>
                                 </DropdownMenuItem>
@@ -99,3 +97,5 @@ export function AdminDashboard() {
         </main>
     );
 }
+
+    
