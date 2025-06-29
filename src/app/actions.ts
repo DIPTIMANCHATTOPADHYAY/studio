@@ -476,12 +476,13 @@ export async function getSignupStatus() {
     try {
         await connectDB();
         const signupSetting = await Setting.findOne({ key: 'signupEnabled' });
-        // If the setting document doesn't exist or is undefined, default to true.
-        // Otherwise, check if its value is strictly true.
-        const isEnabled = signupSetting === null || signupSetting.value === undefined ? true : signupSetting.value === true;
-        return { signupEnabled: isEnabled };
+        // Use !! to coerce to boolean. Defaults to false if not found, which is safer.
+        // The seeder sets the initial value to true.
+        return { signupEnabled: !!signupSetting?.value };
     } catch (error) {
-        return { signupEnabled: true };
+        console.error("Error fetching signup status:", error);
+        // Default to false on error for security.
+        return { signupEnabled: false };
     }
 }
 
@@ -668,7 +669,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
 
         return {
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
-            signupEnabled: settingsMap.signupEnabled === undefined ? true : settingsMap.signupEnabled === true,
+            signupEnabled: !!settingsMap.signupEnabled,
             emailChangeEnabled: settingsMap.emailChangeEnabled === undefined ? true : settingsMap.emailChangeEnabled === true,
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
             colorPrimary: settingsMap.colorPrimary ?? '217.2 91.2% 59.8%',
@@ -750,7 +751,7 @@ export async function getAdminSettings(): Promise<Partial<AdminSettings> & { err
                 username: safeProxySettings.username || '',
                 password: safeProxySettings.password || '',
             },
-            signupEnabled: settingsMap.signupEnabled === undefined ? true : settingsMap.signupEnabled === true,
+            signupEnabled: !!settingsMap.signupEnabled,
             siteName: settingsMap.siteName ?? 'SMS Inspector 2.0',
             footerText: settingsMap.footerText ?? '© {YEAR} {SITENAME}. All rights reserved.',
             emailChangeEnabled: settingsMap.emailChangeEnabled === undefined ? true : settingsMap.emailChangeEnabled === true,
