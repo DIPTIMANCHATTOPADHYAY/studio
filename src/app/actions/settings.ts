@@ -173,6 +173,10 @@ export async function updateAdminSettings(settings: Partial<AdminSettings>) {
         await Promise.all(operations);
         
         // Revalidate paths that depend on these settings
+        if (settings.apiKey !== undefined || settings.proxySettings !== undefined || settings.errorMappings !== undefined) {
+            revalidatePath('/dashboard');
+            revalidatePath('/dashboard/access-list');
+        }
         if (settings.signupEnabled !== undefined) {
             revalidatePath('/signup');
             revalidatePath('/');
@@ -183,7 +187,9 @@ export async function updateAdminSettings(settings: Partial<AdminSettings>) {
         if (Object.keys(settings).some(k => k.startsWith('color'))) {
             revalidatePath('/', 'layout');
         }
-
+        if (settings.numberList !== undefined) {
+            revalidatePath('/dashboard/number-list');
+        }
 
         return { success: true };
     } catch (error) {
@@ -254,3 +260,5 @@ export async function updateAdminCredentials(values: any) {
         return { error: (error as Error).message };
     }
 }
+
+    
