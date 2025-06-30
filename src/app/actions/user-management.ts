@@ -1,3 +1,4 @@
+
 'use server';
 
 import bcrypt from 'bcryptjs';
@@ -24,7 +25,7 @@ export async function getAllUsers(): Promise<{ users?: UserProfile[], error?: st
     try {
         await ensureAdmin();
         await connectDB();
-        const users = await User.find({}).select('-password');
+        const users = await User.find({ status: { $in: ['active', 'blocked'] } }).select('-password');
         const formattedUsers: UserProfile[] = users.map(user => ({
             id: user._id.toString(),
             name: user.name,
@@ -36,6 +37,49 @@ export async function getAllUsers(): Promise<{ users?: UserProfile[], error?: st
             canManageNumbers: user.canManageNumbers,
         }));
         return { users: formattedUsers };
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
+export async function getPendingUsers(): Promise<{ users?: UserProfile[], error?: string }> {
+    try {
+        await ensureAdmin();
+        await connectDB();
+        const users = await User.find({ status: 'inactive' }).select('-password').sort({ createdAt: -1 });
+        const formattedUsers: UserProfile[] = users.map(user => ({
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            photoURL: user.photoURL,
+            status: user.status,
+            isAdmin: user.isAdmin,
+            privateNumberList: user.privateNumberList,
+            canManageNumbers: user.canManageNumbers,
+        }));
+        return { users: formattedUsers };
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
+export async function approveUsers(userIds: string[]): Promise<{ success?: boolean; error?: string }> {
+    try {
+        await ensureAdmin();
+        await connectDB();
+        
+        if (!userIds || userIds.length === 0) {
+            return { error: 'No users selected for approval.' };
+        }
+
+        await User.updateMany(
+            { _id: { $in: userIds }, status: 'inactive' },
+            { $set: { status: 'active' } }
+        );
+
+        revalidatePath('/admin');
+        return { success: true };
+
     } catch (error) {
         return { error: (error as Error).message };
     }

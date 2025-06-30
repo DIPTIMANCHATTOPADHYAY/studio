@@ -8,7 +8,7 @@ export interface IUser extends Document {
   name: string;
   photoURL?: string;
   provider?: 'google' | 'facebook' | 'credentials';
-  status: 'active' | 'blocked';
+  status: 'active' | 'blocked' | 'inactive';
   isAdmin: boolean;
   privateNumberList: string[];
   canManageNumbers: boolean;
@@ -20,7 +20,7 @@ const UserSchema: Schema = new Schema({
   name: { type: String, required: true },
   photoURL: { type: String },
   provider: { type: String, default: 'credentials' },
-  status: { type: String, default: 'active' },
+  status: { type: String, default: 'inactive' },
   isAdmin: { type: Boolean, default: false },
   privateNumberList: { type: [String], default: [] },
   canManageNumbers: { type: Boolean, default: false },

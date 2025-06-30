@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -8,10 +9,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { signup } from '@/app/actions/auth';
 import { signupSchema } from '@/lib/schemas';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 
 const formSchema = signupSchema.extend({
@@ -22,6 +25,7 @@ export function SignupForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
 
@@ -64,11 +68,25 @@ export function SignupForm() {
       setNum2(Math.floor(Math.random() * 10));
       form.setValue('captcha', '');
     } else if (result.success) {
-      toast({
-        title: 'Account Created',
-      });
-      router.push('/login');
+      setSignupSuccess(true);
     }
+  }
+
+  if (signupSuccess) {
+    return (
+        <Alert variant="default" className="border-green-500 text-center">
+            <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-2" />
+            <AlertTitle className="font-bold">Account Created Successfully!</AlertTitle>
+            <AlertDescription className="mt-2">
+                Your account is now pending approval from an administrator. You will be notified once it has been activated.
+                <div className="mt-4">
+                    <Link href="/login">
+                        <Button>Back to Login</Button>
+                    </Link>
+                </div>
+            </AlertDescription>
+        </Alert>
+    );
   }
 
   return (

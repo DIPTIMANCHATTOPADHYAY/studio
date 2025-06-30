@@ -18,6 +18,7 @@ import { NumberManagementTab } from './admin/number-management-tab';
 import { ErrorManagementTab } from './admin/error-management-tab';
 import { SettingsTab } from './admin/settings-tab';
 import { AppearanceTab } from './admin/appearance-tab';
+import { PendingUsersTab } from './admin/pending-users-tab';
 
 export function AdminDashboard() {
     const handleLogout = async () => {
@@ -72,6 +73,7 @@ export function AdminDashboard() {
                 <Tabs defaultValue="users" className="w-full">
                     <TabsList className="h-auto flex-wrap justify-start">
                         <TabsTrigger value="users">User Management</TabsTrigger>
+                        <TabsTrigger value="pending">Pending Approvals</TabsTrigger>
                         <TabsTrigger value="appearance">Appearance</TabsTrigger>
                         <TabsTrigger value="numbers">Number Management</TabsTrigger>
                         <TabsTrigger value="errors">Custom Errors</TabsTrigger>
@@ -79,6 +81,9 @@ export function AdminDashboard() {
                     </TabsList>
                     <TabsContent value="users" className="mt-4">
                         <UserManagementTab />
+                    </TabsContent>
+                    <TabsContent value="pending" className="mt-4">
+                        <PendingUsersTab />
                     </TabsContent>
                     <TabsContent value="appearance" className="mt-4">
                         <AppearanceTab />

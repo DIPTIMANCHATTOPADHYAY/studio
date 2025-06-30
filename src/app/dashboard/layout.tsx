@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, Settings, LogOut, LoaderCircle, ShieldAlert, List, MessageSquare, ListChecks } from 'lucide-react';
+import { User, Settings, LogOut, LoaderCircle, ShieldAlert, List, MessageSquare, ListChecks, ShieldQuestion } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +64,26 @@ export default function DashboardLayout({
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         Your account has been blocked by an administrator. Please contact support for assistance.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={handleLogout}>Logout</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )
+  }
+
+  if (user.status === 'inactive') {
+    return (
+        <AlertDialog open={true}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <ShieldQuestion className="h-6 w-6 text-yellow-500"/> Account Pending Approval
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Your account has been created but is awaiting approval from an administrator. Please check back later.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
