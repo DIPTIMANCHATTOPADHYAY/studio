@@ -800,38 +800,6 @@ export async function toggleCanManageNumbers(userId: string, canManage: boolean)
     }
 }
 
-// --- Admin Auth Actions ---
-const adminLoginSchema = z.object({
-  username: z.string(),
-  password: z.string(),
-});
-
-export async function adminLogin(values: z.infer<typeof adminLoginSchema>) {
-    const adminUsername = process.env.ADMIN_USERNAME;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    if (!adminUsername || !adminPassword) {
-        return { error: 'Admin credentials are not configured on the server. Please check the environment variables.' };
-    }
-
-    if (values.username === adminUsername && values.password === adminPassword) {
-        cookies().set('admin_session', 'true', {
-            httpOnly: true,
-            secure: isSecureEnvironment(),
-            sameSite: 'strict',
-            maxAge: 60 * 60, // 1 hour
-            path: '/',
-        });
-        return { success: true };
-    }
-    return { error: 'Invalid admin credentials.' };
-}
-
-export async function adminLogout() {
-  cookies().delete('admin_session');
-  redirect('/admin');
-}
-
 export async function getNumberList(): Promise<string[]> {
     try {
         await connectDB();

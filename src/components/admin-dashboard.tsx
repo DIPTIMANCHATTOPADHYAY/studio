@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { LogOut, MoreVertical, LayoutGrid, Palette } from 'lucide-react';
-import { adminLogout } from '@/app/actions';
+import { logout } from '@/app/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 import {
@@ -33,10 +33,10 @@ export function AdminDashboard() {
 
                      {/* Desktop Buttons */}
                      <div className="hidden sm:flex items-center gap-2">
-                        <form action={adminLogout}>
+                        <form action={logout}>
                             <Button variant="outline" type="submit">
                                 <LogOut className="mr-2 h-4 w-4" />
-                                Admin Logout
+                                Logout
                             </Button>
                         </form>
                         <Link href="/dashboard">
@@ -61,9 +61,9 @@ export function AdminDashboard() {
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                 <DropdownMenuItem onClick={async () => await adminLogout()}>
+                                 <DropdownMenuItem onClick={async () => await logout()}>
                                     <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Admin Logout</span>
+                                    <span>Logout</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -97,5 +97,3 @@ export function AdminDashboard() {
         </main>
     );
 }
-
-    

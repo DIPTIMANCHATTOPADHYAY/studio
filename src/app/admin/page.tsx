@@ -1,12 +1,12 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AdminDashboard } from '@/components/admin-dashboard';
+import { getCurrentUser } from '@/app/actions';
 
 export default async function AdminPage() {
-    const hasAdminSession = cookies().has('admin_session');
+    const user = await getCurrentUser();
     
-    if (!hasAdminSession) {
-        redirect('/admin/login');
+    if (!user || !user.isAdmin) {
+        redirect('/login');
     }
 
     return <AdminDashboard />;
