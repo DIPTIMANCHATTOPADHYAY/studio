@@ -35,6 +35,7 @@ export interface UserProfile {
   status?: 'active' | 'blocked';
   isAdmin?: boolean;
   privateNumberList?: string[];
+  canManageNumbers?: boolean;
 }
 
 export interface ProxySettings {

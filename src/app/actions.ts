@@ -503,6 +503,7 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
             status: user.status,
             isAdmin: user.isAdmin,
             privateNumberList: user.privateNumberList,
+            canManageNumbers: user.canManageNumbers,
         };
     } catch (error) {
         return null;
@@ -757,6 +758,7 @@ export async function getAllUsers(): Promise<{ users?: UserProfile[], error?: st
             status: user.status,
             isAdmin: user.isAdmin,
             privateNumberList: user.privateNumberList,
+            canManageNumbers: user.canManageNumbers,
         }));
         return { users: formattedUsers };
     } catch (error) {
@@ -769,6 +771,17 @@ export async function toggleUserStatus(id: string, status: 'active' | 'blocked')
     try {
         await connectDB();
         await User.findByIdAndUpdate(id, { status });
+        revalidatePath('/admin');
+        return { success: true };
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
+export async function toggleCanManageNumbers(userId: string, canManage: boolean) {
+    try {
+        await connectDB();
+        await User.findByIdAndUpdate(userId, { canManageNumbers: canManage });
         revalidatePath('/admin');
         return { success: true };
     } catch (error) {
@@ -904,6 +917,70 @@ export async function removePrivateNumbersFromUser(userId: string, numbersToRemo
 
         revalidatePath('/admin');
         return { success: true, newList: updatedUser?.privateNumberList ?? [] };
+
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
+
+// --- User-facing number management ---
+export async function addUserPrivateNumber(number: string): Promise<{ success?: boolean; error?: string; newList?: string[] }> {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'User not authenticated.' };
+        if (!user.canManageNumbers) return { error: 'You do not have permission to manage numbers.' };
+
+        await connectDB();
+        
+        const dbUser = await User.findById(user.id);
+        if (!dbUser) return { error: 'User not found.' };
+
+        const trimmedNumber = number.trim();
+        if (!trimmedNumber) return { error: 'Number cannot be empty.' };
+
+        if (!dbUser.privateNumberList) {
+            dbUser.privateNumberList = [];
+        }
+        
+        if (dbUser.privateNumberList.includes(trimmedNumber)) {
+            return { error: 'This number is already in your private list.' };
+        }
+
+        await User.updateOne(
+            { _id: user.id },
+            { $push: { privateNumberList: trimmedNumber } }
+        );
+
+        const updatedUser = await User.findById(user.id);
+        revalidatePath('/dashboard/number-list');
+        return { success: true, newList: updatedUser?.privateNumberList ?? [] };
+
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
+export async function removeUserPrivateNumbers(numbersToRemove: string[]): Promise<{ success?: boolean; error?: string, newList?: string[] }> {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'User not authenticated.' };
+        if (!user.canManageNumbers) return { error: 'You do not have permission to manage numbers.' };
+
+        await connectDB();
+        
+        if (numbersToRemove.length === 0) {
+            return { error: 'Please select at least one number to remove.' };
+        }
+        await User.updateOne(
+            { _id: user.id },
+            { $pull: { privateNumberList: { $in: numbersToRemove } } }
+        );
+       
+       const updatedUser = await User.findById(user.id);
+
+       revalidatePath('/dashboard/number-list');
+       return { success: true, newList: updatedUser?.privateNumberList ?? [] };
 
     } catch (error) {
         return { error: (error as Error).message };

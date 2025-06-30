@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, Trash2 } from 'lucide-react';
-import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser } from '@/app/actions';
+import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser, toggleCanManageNumbers } from '@/app/actions';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 export function UserManagementTab() {
     const { toast } = useToast();
@@ -61,10 +62,24 @@ export function UserManagementTab() {
             toast({ variant: 'destructive', title: 'Update failed', description: result.error });
         } else {
             toast({ title: 'Status Updated' });
-            fetchUsers(); // Re-fetch to ensure data consistency
+            setUsers(currentUsers => currentUsers.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
         }
     };
     
+    const handleTogglePermission = async (user: UserProfile, canManage: boolean) => {
+        const result = await toggleCanManageNumbers(user.id, canManage);
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Permission update failed', description: result.error });
+        } else {
+            toast({ title: 'Permission Updated' });
+            setUsers(currentUsers =>
+                currentUsers.map(u =>
+                    u.id === user.id ? { ...u, canManageNumbers: canManage } : u
+                )
+            );
+        }
+    };
+
     const openManageNumbersModal = (user: UserProfile) => {
         setSelectedUser(user);
         setPrivateNumbersToAdd('');
@@ -89,6 +104,7 @@ export function UserManagementTab() {
                     u.id === selectedUser.id ? { ...u, privateNumberList: result.newList } : u
                 )
             );
+            setSelectedUser(prev => prev ? { ...prev, privateNumberList: result.newList } : null);
             setPrivateNumbersToAdd(''); // Clear the textarea
         }
     };
@@ -124,6 +140,7 @@ export function UserManagementTab() {
                     u.id === selectedUser.id ? { ...u, privateNumberList: result.newList } : u
                 )
             );
+            setSelectedUser(prev => prev ? { ...prev, privateNumberList: result.newList } : null);
             setNumbersToRemove([]);
         }
     };
@@ -149,6 +166,7 @@ export function UserManagementTab() {
                                     <TableHead>User</TableHead>
                                     <TableHead className="hidden sm:table-cell">Email</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Permissions</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -172,6 +190,18 @@ export function UserManagementTab() {
                                             <span className={`px-2 py-1 text-xs rounded-full ${user.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'}`}>
                                                 {user.status}
                                             </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Switch
+                                                    id={`can-manage-${user.id}`}
+                                                    checked={user.canManageNumbers}
+                                                    onCheckedChange={(checked) => handleTogglePermission(user, checked)}
+                                                    disabled={user.isAdmin}
+                                                    aria-label="Toggle number management permission"
+                                                />
+                                                <Label htmlFor={`can-manage-${user.id}`} className="text-sm text-muted-foreground whitespace-nowrap">Can Add Numbers</Label>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="sm" onClick={() => openManageNumbersModal(user)} disabled={user.isAdmin}>

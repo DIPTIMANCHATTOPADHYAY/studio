@@ -11,6 +11,7 @@ export interface IUser extends Document {
   status: 'active' | 'blocked';
   isAdmin: boolean;
   privateNumberList: string[];
+  canManageNumbers: boolean;
 }
 
 const UserSchema: Schema = new Schema({
@@ -22,6 +23,7 @@ const UserSchema: Schema = new Schema({
   status: { type: String, default: 'active' },
   isAdmin: { type: Boolean, default: false },
   privateNumberList: { type: [String], default: [] },
+  canManageNumbers: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export const User: Model<IUser> = models.User || mongoose.model<IUser>('User', UserSchema);
