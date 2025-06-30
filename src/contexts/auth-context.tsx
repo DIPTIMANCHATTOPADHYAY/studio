@@ -2,7 +2,7 @@
 
 import { useState, useEffect, createContext, ReactNode, useCallback } from 'react';
 import type { UserProfile } from '@/lib/types';
-import { getCurrentUser } from '@/app/actions';
+import { getCurrentUser } from '@/app/actions/auth';
 
 interface AuthContextType {
     user: UserProfile | null;

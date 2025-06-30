@@ -1,5 +1,5 @@
 import { SmsInspector } from '@/components/sms-inspector';
-import { fetchSmsData } from '@/app/actions';
+import { fetchSmsData } from '@/app/actions/data';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 export default async function DashboardPage() {

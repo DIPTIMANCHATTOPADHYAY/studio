@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { fetchSmsData } from '@/app/actions';
+import { fetchSmsData } from '@/app/actions/data';
 import { SmsTable } from '@/components/sms-table';
 import type { SmsRecord } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';

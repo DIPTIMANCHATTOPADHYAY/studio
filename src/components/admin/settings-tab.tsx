@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import { getAdminSettings, updateAdminSettings, updateAdminCredentials } from '@/app/actions';
+import { getAdminSettings, updateAdminSettings, updateAdminCredentials } from '@/app/actions/settings';
 import type { ProxySettings } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { useForm } from 'react-hook-form';
@@ -19,11 +20,10 @@ const adminCredentialsSchema = z.object({
   currentPassword: z.string().min(1, { message: "Current password is required." }),
   newEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')),
   newPassword: z.string().min(8, { message: 'New password must be at least 8 characters.'}).optional().or(z.literal('')),
-}).refine(data => !!data.newEmail || !!data.newPassword, {
+}).refine(data => data.newEmail || data.newPassword, {
   message: "You must provide either a new email or a new password.",
   path: ["newEmail"],
 });
-
 
 export function SettingsTab() {
     const { toast } = useToast();

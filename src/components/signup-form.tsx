@@ -10,13 +10,10 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { signup } from '@/app/actions';
+import { signup, signupSchema } from '@/app/actions/auth';
 
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
+const formSchema = signupSchema.extend({
   captcha: z.string().min(1, { message: 'Please answer the security question.' }),
 });
 

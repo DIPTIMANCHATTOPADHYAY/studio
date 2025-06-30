@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { logout } from '@/app/actions';
+import { logout } from '@/app/actions/auth';
 import {
   AlertDialog,
   AlertDialogAction,

@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, Trash2 } from 'lucide-react';
-import { getNumberList, updateAdminSettings } from '@/app/actions';
+import { getAdminSettings, updateAdminSettings } from '@/app/actions/settings';
+import { getNumberList } from '@/app/actions/user-profile';
 import {
   AlertDialog,
   AlertDialogAction,

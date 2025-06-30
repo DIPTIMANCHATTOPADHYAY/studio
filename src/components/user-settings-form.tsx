@@ -10,15 +10,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
-import { updateUserProfile } from '@/app/actions';
+import { updateUserProfile, userProfileSchema } from '@/app/actions/user-profile';
 import type { UserProfile } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { CardContent, CardFooter } from './ui/card';
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email.' }),
-});
+const formSchema = userProfileSchema;
 
 interface UserSettingsFormProps {
   user: UserProfile;

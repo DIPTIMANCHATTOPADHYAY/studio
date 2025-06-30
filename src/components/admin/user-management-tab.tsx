@@ -10,7 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, Trash2, UserPlus, Key } from 'lucide-react';
-import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser, toggleCanManageNumbers, adminCreateUser, adminResetUserPassword, adminDeleteUser } from '@/app/actions';
+import { 
+    getAllUsers, 
+    toggleUserStatus, 
+    addPrivateNumbersToUser, 
+    removePrivateNumbersFromUser, 
+    toggleCanManageNumbers, 
+    adminCreateUser, 
+    adminResetUserPassword, 
+    adminDeleteUser,
+    adminCreateUserSchema,
+    adminResetPasswordSchema
+} from '@/app/actions/user-management';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,15 +52,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
 
-const createUserSchema = z.object({
-  name: z.string().min(2, { message: 'Name is required.'}),
-  email: z.string().email(),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.'}),
-});
-
-const resetPasswordSchema = z.object({
-  password: z.string().min(8, { message: 'New password must be at least 8 characters.'}),
-});
+const createUserFormSchema = adminCreateUserSchema;
+const resetPasswordFormSchema = adminResetPasswordSchema.omit({ userId: true });
 
 
 export function UserManagementTab() {
@@ -68,13 +72,13 @@ export function UserManagementTab() {
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
-    const createUserForm = useForm<z.infer<typeof createUserSchema>>({
-        resolver: zodResolver(createUserSchema),
+    const createUserForm = useForm<z.infer<typeof createUserFormSchema>>({
+        resolver: zodResolver(createUserFormSchema),
         defaultValues: { name: '', email: '', password: '' },
     });
 
-    const resetPasswordForm = useForm<z.infer<typeof resetPasswordSchema>>({
-        resolver: zodResolver(resetPasswordSchema),
+    const resetPasswordForm = useForm<z.infer<typeof resetPasswordFormSchema>>({
+        resolver: zodResolver(resetPasswordFormSchema),
         defaultValues: { password: '' },
     });
 
@@ -184,7 +188,7 @@ export function UserManagementTab() {
         }
     };
 
-    const handleCreateUser = async (values: z.infer<typeof createUserSchema>) => {
+    const handleCreateUser = async (values: z.infer<typeof createUserFormSchema>) => {
         const result = await adminCreateUser(values);
         if (result.error) {
             toast({ variant: 'destructive', title: 'Failed to create user', description: result.error });
@@ -196,7 +200,7 @@ export function UserManagementTab() {
         }
     };
 
-    const handleResetPassword = async (values: z.infer<typeof resetPasswordSchema>) => {
+    const handleResetPassword = async (values: z.infer<typeof resetPasswordFormSchema>) => {
         if (!selectedUser) return;
         const result = await adminResetUserPassword({ userId: selectedUser.id, password: values.password });
          if (result.error) {

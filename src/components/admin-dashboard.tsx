@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { LogOut, MoreVertical, LayoutGrid } from 'lucide-react';
-import { logout } from '@/app/actions';
+import { logout } from '@/app/actions/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 import {

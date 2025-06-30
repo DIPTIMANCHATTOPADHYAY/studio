@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, Trash2 } from 'lucide-react';
-import { getAdminSettings, updateAdminSettings } from '@/app/actions';
+import { getAdminSettings, updateAdminSettings } from '@/app/actions/settings';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 

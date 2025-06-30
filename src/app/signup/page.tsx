@@ -1,7 +1,8 @@
 import { SignupForm } from '@/components/signup-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
-import { getSignupStatus, getPublicSettings } from '@/app/actions';
+import { getSignupStatus } from '@/app/actions/auth';
+import { getPublicSettings } from '@/app/actions/settings';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ShieldX } from 'lucide-react';
 import { Button } from '@/components/ui/button';

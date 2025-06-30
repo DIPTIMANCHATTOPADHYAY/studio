@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Globe, BarChart, ShieldCheck, ArrowRight, Code, MessageSquare, DollarSign } from 'lucide-react';
+import { getPublicSettings } from '@/app/actions/settings';
 
 interface LandingPageProps {
   siteName: string;

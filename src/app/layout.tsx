@@ -3,7 +3,7 @@ import type {Metadata} from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
-import { getPublicSettings } from './actions';
+import { getPublicSettings } from './actions/settings';
 import { SettingsProvider } from '@/contexts/settings-provider';
 import { allColorKeys } from '@/lib/types';
 

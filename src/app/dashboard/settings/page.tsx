@@ -1,4 +1,5 @@
-import { getPublicSettings, getCurrentUser } from "@/app/actions";
+import { getPublicSettings } from "@/app/actions/settings";
+import { getCurrentUser } from "@/app/actions/auth";
 import { UserSettingsForm } from "@/components/user-settings-form";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { redirect } from "next/navigation";

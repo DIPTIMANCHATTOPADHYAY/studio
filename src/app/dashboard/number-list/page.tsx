@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCombinedNumberList, addPublicNumbers } from "@/app/actions";
+import { getCombinedNumberList, addPublicNumbers } from "@/app/actions/user-profile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Copy, Check, LoaderCircle, Lock, Globe } from "lucide-react";

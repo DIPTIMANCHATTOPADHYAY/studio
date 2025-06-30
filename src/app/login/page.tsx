@@ -1,7 +1,7 @@
 import { LoginForm } from '@/components/login-form';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
-import { getPublicSettings } from '@/app/actions';
+import { getPublicSettings } from '@/app/actions/settings';
 
 export default async function LoginPage() {
     const { siteName } = await getPublicSettings();

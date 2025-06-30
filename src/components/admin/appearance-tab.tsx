@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import { getAdminSettings, updateAdminSettings } from '@/app/actions';
+import { getAdminSettings, updateAdminSettings } from '@/app/actions/settings';
 import { hslToHex, hexToHsl } from '@/lib/utils';
 import { allColorKeys } from '@/lib/types';
 
