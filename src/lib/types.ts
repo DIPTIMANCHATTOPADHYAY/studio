@@ -95,7 +95,7 @@ export interface AccessListRecord {
 }
 
 const accessListFilterFormSchema = z.object({
-  origin: z.string().optional(),
+  origin: z.string().min(1, { message: 'Sender (Origin) is required to search.' }),
   destination: z.string().optional(),
   message: z.string().optional(),
 });

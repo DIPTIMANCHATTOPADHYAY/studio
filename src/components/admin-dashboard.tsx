@@ -18,15 +18,10 @@ import { NumberManagementTab } from './admin/number-management-tab';
 import { ErrorManagementTab } from './admin/error-management-tab';
 import { SettingsTab } from './admin/settings-tab';
 import { AppearanceTab } from './admin/appearance-tab';
-import { useRouter } from 'next/navigation';
-
 
 export function AdminDashboard() {
-    const router = useRouter();
-
     const handleLogout = async () => {
         await logout();
-        router.push('/login');
     }
 
     return (

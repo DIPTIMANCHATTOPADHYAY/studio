@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -61,7 +62,7 @@ export function UserSettingsForm({ user, emailChangeEnabled }: UserSettingsFormP
                 <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                    <Input placeholder="Your name" {...field} />
+                    <Input placeholder="Your name" {...field} disabled={isLoading} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -74,7 +75,7 @@ export function UserSettingsForm({ user, emailChangeEnabled }: UserSettingsFormP
                 <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                    <Input placeholder="your@email.com" {...field} disabled={!emailChangeEnabled} />
+                    <Input placeholder="your@email.com" {...field} disabled={!emailChangeEnabled || isLoading} />
                 </FormControl>
                  <FormDescription>
                     {!emailChangeEnabled && "Changing your email address has been disabled by an administrator."}

@@ -87,7 +87,8 @@ async function handleApiError(response: Response): Promise<{ error: string }> {
                     return { error: customMessage };
                 }
             }
-            return { error: `API Error: ${jsonError.error.message}` };
+            const message = jsonError.error.message || `An unknown API error occurred. Raw error: ${JSON.stringify(jsonError.error)}`;
+            return { error: `API Error: ${message}` };
         }
     } catch (e) {
         // Ignore parsing error, return raw text
@@ -163,17 +164,25 @@ export async function fetchSmsData(
   const agent = await getProxyAgent();
 
   const API_URL = 'https://api.premiumy.net/v1.0/csv';
+  
+  const apiFilter: { [key: string]: string | undefined } = {
+    start_date: format(filter.startDate!, 'yyyy-MM-dd HH:mm:ss'),
+    end_date: format(filter.endDate!, 'yyyy-MM-dd HH:mm:ss'),
+  };
+
+  if (filter.senderId) {
+    apiFilter.senderid = filter.senderId;
+  }
+  if (filter.phone) {
+    apiFilter.phone = filter.phone;
+  }
+
   const body = {
     id: null,
     jsonrpc: '2.0',
     method: 'sms.mdr_full:get_list',
     params: {
-      filter: {
-        start_date: format(filter.startDate!, 'yyyy-MM-dd HH:mm:ss'),
-        end_date: format(filter.endDate!, 'yyyy-MM-dd HH:mm:ss'),
-        senderid: filter.senderId,
-        phone: filter.phone,
-      },
+      filter: apiFilter,
       page: 1,
       per_page: 100,
     },
@@ -286,20 +295,30 @@ export async function fetchAccessListData(
   }
   
   const agent = await getProxyAgent();
-
   const API_URL = 'https://api.premiumy.net/v1.0/csv';
+  
+  const accessListApiFilter: { [key: string]: any } = {
+    cur_key: 1,
+    sp_key_list: null,
+  };
+
+  if (formValues.origin) {
+    accessListApiFilter.origin = formValues.origin;
+  }
+  if (formValues.destination) {
+    accessListApiFilter.destination = formValues.destination;
+  }
+  if (formValues.message) {
+    accessListApiFilter.message = formValues.message;
+  }
+
+
   const body = {
     id: null,
     jsonrpc: '2.0',
     method: 'sms.access_list__get_list:account_price',
     params: {
-      filter: {
-        cur_key: 1,
-        destination: formValues.destination,
-        message: formValues.message,
-        origin: formValues.origin,
-        sp_key_list: null
-      },
+      filter: accessListApiFilter,
       page: 1,
       per_page: 100,
     },
