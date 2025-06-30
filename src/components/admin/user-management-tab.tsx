@@ -19,9 +19,8 @@ import {
     adminCreateUser, 
     adminResetUserPassword, 
     adminDeleteUser,
-    adminCreateUserSchema,
-    adminResetPasswordSchema
 } from '@/app/actions/user-management';
+import { adminCreateUserSchema, adminResetPasswordSchema } from '@/lib/schemas';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

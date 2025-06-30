@@ -10,7 +10,8 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { login, loginSchema } from '@/app/actions/auth';
+import { login } from '@/app/actions/auth';
+import { loginSchema } from '@/lib/schemas';
 import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = loginSchema.extend({

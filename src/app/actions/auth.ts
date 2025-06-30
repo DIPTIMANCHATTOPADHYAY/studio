@@ -9,6 +9,7 @@ import { z } from 'zod';
 import connectDB from '@/lib/mongodb';
 import { User, Setting } from '@/lib/models';
 import type { UserProfile } from '@/lib/types';
+import { loginSchema, signupSchema } from '@/lib/schemas';
 
 // --- Auth Helpers ---
 function isSecureEnvironment() {
@@ -36,12 +37,6 @@ export async function getSignupStatus() {
         return { signupEnabled: false };
     }
 }
-
-export const signupSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
 
 export async function signup(values: z.infer<typeof signupSchema>) {
     try {
@@ -73,12 +68,6 @@ export async function signup(values: z.infer<typeof signupSchema>) {
         return { error: 'An unexpected error occurred.' };
     }
 }
-
-
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
 
 export async function login(values: z.infer<typeof loginSchema>) {
   try {

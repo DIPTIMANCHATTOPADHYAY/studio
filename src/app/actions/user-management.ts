@@ -8,6 +8,7 @@ import connectDB from '@/lib/mongodb';
 import { User } from '@/lib/models';
 import { getCurrentUser } from './auth';
 import type { UserProfile } from '@/lib/types';
+import { adminCreateUserSchema, adminResetPasswordSchema } from '@/lib/schemas';
 
 
 // --- Helpers ---
@@ -144,13 +145,6 @@ export async function removePrivateNumbersFromUser(userId: string, numbersToRemo
     }
 }
 
-
-export const adminCreateUserSchema = z.object({
-  name: z.string().min(2, { message: 'Name is required.'}),
-  email: z.string().email(),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters.'}),
-});
-
 export async function adminCreateUser(values: z.infer<typeof adminCreateUserSchema>) {
   try {
     await ensureAdmin();
@@ -177,11 +171,6 @@ export async function adminCreateUser(values: z.infer<typeof adminCreateUserSche
     return { error: (error as Error).message };
   }
 }
-
-export const adminResetPasswordSchema = z.object({
-  userId: z.string(),
-  password: z.string().min(8, { message: 'New password must be at least 8 characters.'}),
-});
 
 export async function adminResetUserPassword(values: z.infer<typeof adminResetPasswordSchema>) {
   try {

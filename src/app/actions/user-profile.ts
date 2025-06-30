@@ -8,13 +8,9 @@ import connectDB from '@/lib/mongodb';
 import { User, Setting } from '@/lib/models';
 import type { UserProfile } from '@/lib/types';
 import { getCurrentUser, setAuthCookie } from './auth';
+import { userProfileSchema } from '@/lib/schemas';
 
 // --- User Profile Actions ---
-export const userProfileSchema = z.object({
-    name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-    email: z.string().email({ message: 'Please enter a valid email address.' }),
-});
-
 export async function updateUserProfile(userId: string, values: z.infer<typeof userProfileSchema>) {
     try {
         const validation = userProfileSchema.safeParse(values);
