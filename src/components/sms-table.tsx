@@ -48,16 +48,16 @@ export function SmsTable({ records, isLoading }: SmsTableProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const handleCopyCode = (code: string) => {
-    if (!navigator.clipboard) {
-      toast({ variant: 'destructive', title: 'Copy not supported' });
-      return;
-    }
     navigator.clipboard.writeText(code).then(() => {
       toast({ title: 'Code Copied!' });
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2000);
     }).catch(err => {
-      toast({ variant: 'destructive', title: 'Failed to copy' });
+      toast({ 
+        variant: 'destructive', 
+        title: 'Failed to copy',
+        description: 'Could not copy to clipboard. This can be due to browser permissions or an insecure (HTTP) connection.'
+      });
     });
   }
 
