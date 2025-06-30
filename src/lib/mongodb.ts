@@ -62,27 +62,59 @@ const defaultSettings: { [key: string]: any } = {
 
 async function seedDatabase() {
     try {
-        // Seed Admin User
-        const adminEmail = process.env.ADMIN_EMAIL;
-        const adminPassword = process.env.ADMIN_PASSWORD;
-
-        if (!adminEmail || !adminPassword) {
-            console.warn('ADMIN_EMAIL or ADMIN_PASSWORD not set in .env. Skipping default admin creation. Please set them for production.');
+        // --- New logic for multiple admins ---
+        if (process.env.ADMIN_ACCOUNTS) {
+            try {
+                const adminAccounts = JSON.parse(process.env.ADMIN_ACCOUNTS);
+                if (Array.isArray(adminAccounts)) {
+                    for (const account of adminAccounts) {
+                        if (account.email && account.password) {
+                            const adminExists = await User.findOne({ email: account.email });
+                            if (!adminExists) {
+                                const hashedPassword = await bcrypt.hash(account.password, 10);
+                                await User.create({
+                                    name: 'Admin',
+                                    email: account.email,
+                                    password: hashedPassword,
+                                    isAdmin: true,
+                                    status: 'active',
+                                });
+                                console.log(`Default admin user created for ${account.email}.`);
+                            } else {
+                                if (!adminExists.isAdmin) {
+                                    await User.updateOne({ _id: adminExists._id }, { $set: { isAdmin: true } });
+                                    console.log(`User ${account.email} has been promoted to an admin.`);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Could not parse ADMIN_ACCOUNTS JSON. Please check the format in your .env file.", e);
+            }
         } else {
-            const adminExists = await User.findOne({ email: adminEmail });
-            if (!adminExists) {
-                const hashedPassword = await bcrypt.hash(adminPassword, 10);
-                await User.create({
-                    name: 'Admin',
-                    email: adminEmail,
-                    password: hashedPassword,
-                    isAdmin: true,
-                    status: 'active',
-                });
-                console.log('Default admin user created.');
+            // --- Fallback to single admin for backward compatibility ---
+            const adminEmail = process.env.ADMIN_EMAIL;
+            const adminPassword = process.env.ADMIN_PASSWORD;
+
+            if (!adminEmail || !adminPassword) {
+                console.warn('ADMIN_EMAIL or ADMIN_PASSWORD not set in .env. Skipping default admin creation. Please set them for production.');
+            } else {
+                const adminExists = await User.findOne({ email: adminEmail });
+                if (!adminExists) {
+                    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+                    await User.create({
+                        name: 'Admin',
+                        email: adminEmail,
+                        password: hashedPassword,
+                        isAdmin: true,
+                        status: 'active',
+                    });
+                    console.log('Default admin user created.');
+                }
             }
         }
-        
+
         // Seed all settings from defaultSettings object
         for (const key in defaultSettings) {
             const settingExists = await Setting.findOne({ key });
