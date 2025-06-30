@@ -42,10 +42,8 @@ export default function DashboardLayout({
   }, [loading, user, router]);
 
   const handleLogout = async () => {
-    router.prefetch('/');
     await logout();
-    refreshUser(); 
-    router.push('/');
+    await refreshUser(); 
   };
 
   if (loading || !user) {

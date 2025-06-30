@@ -2,7 +2,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button';
-import { LogOut, MoreVertical, LayoutGrid, Palette } from 'lucide-react';
+import { LogOut, MoreVertical, LayoutGrid } from 'lucide-react';
 import { logout } from '@/app/actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
@@ -18,9 +18,16 @@ import { NumberManagementTab } from './admin/number-management-tab';
 import { ErrorManagementTab } from './admin/error-management-tab';
 import { SettingsTab } from './admin/settings-tab';
 import { AppearanceTab } from './admin/appearance-tab';
+import { useRouter } from 'next/navigation';
 
 
 export function AdminDashboard() {
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        await logout();
+        router.push('/login');
+    }
 
     return (
         <main className="min-h-screen w-full bg-background p-4 sm:p-6 lg:p-8">
@@ -33,12 +40,10 @@ export function AdminDashboard() {
 
                      {/* Desktop Buttons */}
                      <div className="hidden sm:flex items-center gap-2">
-                        <form action={logout}>
-                            <Button variant="outline" type="submit">
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Logout
-                            </Button>
-                        </form>
+                        <Button variant="outline" onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Logout
+                        </Button>
                         <Link href="/dashboard">
                             <Button>Back to App</Button>
                         </Link>
@@ -61,7 +66,7 @@ export function AdminDashboard() {
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                 <DropdownMenuItem onClick={async () => await logout()}>
+                                 <DropdownMenuItem onClick={handleLogout}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Logout</span>
                                 </DropdownMenuItem>

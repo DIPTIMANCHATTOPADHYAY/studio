@@ -472,7 +472,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
     
     setAuthCookie(token);
 
-    return { success: true };
+    return { success: true, isAdmin: user.isAdmin };
   } catch (error) {
     console.error("Login error:", error);
     return { error: 'An unexpected error occurred.' };
@@ -481,7 +481,6 @@ export async function login(values: z.infer<typeof loginSchema>) {
 
 export async function logout() {
     cookies().delete('token');
-    cookies().delete('admin_session');
     redirect('/');
 }
 

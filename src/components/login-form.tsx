@@ -67,7 +67,11 @@ export function LoginForm() {
     } else if (result.success) {
       toast({ title: 'Login Successful' });
       await refreshUser(); // Ensure auth state is updated before navigating
-      router.push('/dashboard');
+      if (result.isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     }
   }
 
