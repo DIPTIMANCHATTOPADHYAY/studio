@@ -1,7 +1,8 @@
+
 'use server';
 
 import { z } from 'zod';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, subDays } from 'date-fns';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
 import connectDB from '@/lib/mongodb';
@@ -396,4 +397,33 @@ export async function fetchAccessListData(
     console.error('Failed to fetch access list data:', error);
     return { error: error.message || 'An unknown error occurred.' };
   }
+}
+
+export async function getActiveOtpNumbers(): Promise<{ activeNumbers?: string[]; error?: string }> {
+    const twentyFourHoursAgo = subDays(new Date(), 1);
+    const now = new Date();
+
+    const result = await fetchSmsData({
+        startDate: twentyFourHoursAgo,
+        endDate: now,
+    });
+
+    if (result.error) {
+        // Don't treat "No records" as a hard error for this background task
+        if (result.error.includes("No records")) return { activeNumbers: [] };
+        return { error: result.error };
+    }
+
+    if (!result.data) {
+        return { activeNumbers: [] };
+    }
+
+    const activeNumbers = new Set<string>();
+    for (const record of result.data) {
+        if (record.extractedInfo?.confirmationCode && record.phone) {
+            activeNumbers.add(record.phone);
+        }
+    }
+
+    return { activeNumbers: Array.from(activeNumbers) };
 }

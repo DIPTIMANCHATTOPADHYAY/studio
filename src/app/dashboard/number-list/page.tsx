@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { getCombinedNumberList, addPublicNumbers } from "@/app/actions/user-profile";
+import { getActiveOtpNumbers } from "@/app/actions/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Copy, Check, LoaderCircle, Lock, Globe } from "lucide-react";
@@ -11,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
-const NumberItem = ({ number }: { number: string }) => {
+const NumberItem = ({ number, isHighlighted }: { number: string, isHighlighted: boolean }) => {
     const { toast } = useToast();
     const [copied, setCopied] = useState(false);
 
@@ -60,7 +62,9 @@ const NumberItem = ({ number }: { number: string }) => {
 
     return (
         <li className="flex items-center justify-between p-3 bg-muted/50 rounded-md transition-colors hover:bg-muted group">
-            <span className="font-mono text-sm">{number}</span>
+            <span className={cn("font-mono text-sm", {
+                "font-semibold text-green-600 dark:text-green-500": isHighlighted
+            })}>{number}</span>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => handleCopy(number)}>
                 {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
             </Button>
@@ -72,6 +76,7 @@ export default function NumberListPage() {
     const { user, loading: authLoading } = useAuth();
     const [publicNumbers, setPublicNumbers] = useState<string[]>([]);
     const [privateNumbers, setPrivateNumbers] = useState<string[]>([]);
+    const [activeOtpNumbers, setActiveOtpNumbers] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const [bulkNumbers, setBulkNumbers] = useState('');
     const [isAdding, setIsAdding] = useState(false);
@@ -80,13 +85,25 @@ export default function NumberListPage() {
     useEffect(() => {
         async function loadNumbers() {
             setIsLoading(true);
-            const result = await getCombinedNumberList();
-            if (result.error) {
-                toast({ variant: "destructive", title: "Failed to load numbers", description: result.error });
+            const [listResult, activeResult] = await Promise.all([
+                getCombinedNumberList(),
+                getActiveOtpNumbers()
+            ]);
+
+            if (listResult.error) {
+                toast({ variant: "destructive", title: "Failed to load numbers", description: listResult.error });
             } else {
-                setPublicNumbers(result.publicNumbers);
-                setPrivateNumbers(result.privateNumbers);
+                setPublicNumbers(listResult.publicNumbers);
+                setPrivateNumbers(listResult.privateNumbers);
             }
+            
+            if (activeResult.error) {
+                console.error("Failed to fetch active OTP numbers:", activeResult.error);
+                setActiveOtpNumbers(new Set());
+            } else {
+                setActiveOtpNumbers(new Set(activeResult.activeNumbers || []));
+            }
+
             setIsLoading(false);
         }
         loadNumbers();
@@ -137,7 +154,7 @@ export default function NumberListPage() {
                                     {privateNumbers.length > 0 ? (
                                         <ul className="space-y-3">
                                             {privateNumbers.map((number, index) => (
-                                                <NumberItem key={index} number={number} />
+                                                <NumberItem key={index} number={number} isHighlighted={activeOtpNumbers.has(number)} />
                                             ))}
                                         </ul>
                                     ) : (
@@ -164,7 +181,7 @@ export default function NumberListPage() {
                                     {publicNumbers.length > 0 ? (
                                         <ul className="space-y-3">
                                             {publicNumbers.map((number, index) => (
-                                                <NumberItem key={index} number={number} />
+                                                <NumberItem key={index} number={number} isHighlighted={activeOtpNumbers.has(number)} />
                                             ))}
                                         </ul>
                                     ) : (
