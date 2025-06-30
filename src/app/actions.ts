@@ -777,7 +777,6 @@ export async function toggleUserStatus(id: string, status: 'active' | 'blocked')
 }
 
 // --- Admin Auth Actions ---
-
 const adminLoginSchema = z.object({
   username: z.string(),
   password: z.string(),
@@ -804,10 +803,9 @@ export async function adminLogin(values: z.infer<typeof adminLoginSchema>) {
     return { error: 'Invalid admin credentials.' };
 }
 
-
 export async function adminLogout() {
   cookies().delete('admin_session');
-  redirect('/');
+  redirect('/admin');
 }
 
 export async function getNumberList(): Promise<string[]> {
@@ -872,6 +870,40 @@ export async function addPrivateNumbersToUser(userId: string, numbers: string): 
 
         revalidatePath('/admin');
         return { success: true, addedCount: uniqueNewNumbers.length, newList: updatedUser?.privateNumberList ?? [] };
+
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}
+
+export async function removePrivateNumbersFromUser(userId: string, numbersToRemove: string[] | 'all'): Promise<{ success?: boolean; error?: string; newList?: string[] }> {
+    try {
+        await connectDB();
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return { error: 'User not found.' };
+        }
+
+        if (numbersToRemove === 'all') {
+             await User.updateOne(
+                { _id: userId },
+                { $set: { privateNumberList: [] } }
+            );
+        } else {
+             if (numbersToRemove.length === 0) {
+                return { error: 'Please select at least one number to remove.' };
+            }
+             await User.updateOne(
+                { _id: userId },
+                { $pull: { privateNumberList: { $in: numbersToRemove } } }
+            );
+        }
+        
+        const updatedUser = await User.findById(userId);
+
+        revalidatePath('/admin');
+        return { success: true, newList: updatedUser?.privateNumberList ?? [] };
 
     } catch (error) {
         return { error: (error as Error).message };

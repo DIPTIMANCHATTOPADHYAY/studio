@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, X } from 'lucide-react';
-import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser } from '@/app/actions';
+import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, Trash2 } from 'lucide-react';
+import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser } from '@/app/actions';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,6 +21,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 export function UserManagementTab() {
     const { toast } = useToast();
@@ -32,6 +34,9 @@ export function UserManagementTab() {
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [privateNumbersToAdd, setPrivateNumbersToAdd] = useState('');
     const [isAddingNumbers, setIsAddingNumbers] = useState(false);
+    const [numbersToRemove, setNumbersToRemove] = useState<string[]>([]);
+    const [isRemovingNumbers, setIsRemovingNumbers] = useState(false);
+
 
     const fetchUsers = async () => {
         setIsLoading(true);
@@ -63,6 +68,7 @@ export function UserManagementTab() {
     const openManageNumbersModal = (user: UserProfile) => {
         setSelectedUser(user);
         setPrivateNumbersToAdd('');
+        setNumbersToRemove([]); // Reset selection when opening modal
         setIsModalOpen(true);
     };
 
@@ -83,7 +89,42 @@ export function UserManagementTab() {
                     u.id === selectedUser.id ? { ...u, privateNumberList: result.newList } : u
                 )
             );
-            setIsModalOpen(false);
+            setPrivateNumbersToAdd(''); // Clear the textarea
+        }
+    };
+
+    const handleToggleNumberToRemove = (number: string) => {
+        setNumbersToRemove(prev => 
+            prev.includes(number) 
+                ? prev.filter(n => n !== number)
+                : [...prev, number]
+        );
+    };
+
+    const handleRemoveNumbers = async (type: 'selected' | 'all') => {
+        if (!selectedUser) return;
+        
+        const numbers = type === 'all' ? 'all' : numbersToRemove;
+
+        if (type === 'selected' && numbersToRemove.length === 0) {
+            toast({ variant: 'destructive', title: 'No numbers selected' });
+            return;
+        }
+
+        setIsRemovingNumbers(true);
+        const result = await removePrivateNumbersFromUser(selectedUser.id, numbers);
+        setIsRemovingNumbers(false);
+
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Failed to remove numbers', description: result.error });
+        } else {
+            toast({ title: 'Private Numbers Removed' });
+            setUsers(currentUsers =>
+                currentUsers.map(u =>
+                    u.id === selectedUser.id ? { ...u, privateNumberList: result.newList } : u
+                )
+            );
+            setNumbersToRemove([]);
         }
     };
 
@@ -151,20 +192,55 @@ export function UserManagementTab() {
             </Card>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-2xl">
+                <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Manage Private Numbers for {selectedUser?.name}</DialogTitle>
                         <DialogDescription>
-                            Add new numbers to this user's private list. These will only be visible to them.
+                            Add new numbers or remove existing numbers from this user's private list.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                         <div>
-                            <h3 className="font-semibold mb-2">Current Private Numbers ({selectedUser?.privateNumberList?.length || 0})</h3>
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-semibold">Current Numbers ({selectedUser?.privateNumberList?.length || 0})</h3>
+                                {selectedUser?.privateNumberList && selectedUser.privateNumberList.length > 0 && (
+                                    <div className="space-x-2">
+                                        <Button 
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleRemoveNumbers('selected')}
+                                            disabled={isRemovingNumbers || numbersToRemove.length === 0}
+                                        >
+                                            {isRemovingNumbers ? <LoaderCircle className="mr-1 h-3 w-3 animate-spin" /> : <Trash2 className="mr-1 h-3 w-3" />}
+                                            Remove ({numbersToRemove.length})
+                                        </Button>
+                                        <Button 
+                                            variant="destructive" 
+                                            size="sm"
+                                            onClick={() => handleRemoveNumbers('all')}
+                                            disabled={isRemovingNumbers}
+                                        >
+                                            Remove All
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                             <ScrollArea className="h-48 w-full rounded-md border">
                                 {selectedUser?.privateNumberList && selectedUser.privateNumberList.length > 0 ? (
-                                    <div className="p-4 text-sm">
-                                        {selectedUser.privateNumberList.map(num => <div key={num} className="font-mono p-1">{num}</div>)}
+                                    <div className="p-2">
+                                        {selectedUser.privateNumberList.map(num => (
+                                            <div key={num} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                                                <Checkbox
+                                                    id={`remove-${num}`}
+                                                    checked={numbersToRemove.includes(num)}
+                                                    onCheckedChange={() => handleToggleNumberToRemove(num)}
+                                                    disabled={isAddingNumbers || isRemovingNumbers}
+                                                />
+                                                <Label htmlFor={`remove-${num}`} className="font-mono text-sm w-full cursor-pointer">
+                                                    {num}
+                                                </Label>
+                                            </div>
+                                        ))}
                                     </div>
                                 ) : (
                                     <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -179,19 +255,19 @@ export function UserManagementTab() {
                                 placeholder="Paste numbers here, one per line..."
                                 value={privateNumbersToAdd}
                                 onChange={(e) => setPrivateNumbersToAdd(e.target.value)}
-                                className="h-48"
-                                disabled={isAddingNumbers}
+                                className="h-40"
+                                disabled={isAddingNumbers || isRemovingNumbers}
                             />
+                             <Button onClick={handleAddPrivateNumbers} disabled={isAddingNumbers || isRemovingNumbers || !privateNumbersToAdd.trim()}>
+                                {isAddingNumbers && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                Add Numbers
+                            </Button>
                         </div>
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button type="button" variant="secondary">Cancel</Button>
+                            <Button type="button" variant="secondary" disabled={isAddingNumbers || isRemovingNumbers}>Close</Button>
                         </DialogClose>
-                         <Button onClick={handleAddPrivateNumbers} disabled={isAddingNumbers || !privateNumbersToAdd.trim()}>
-                            {isAddingNumbers && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                            Add Numbers
-                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
