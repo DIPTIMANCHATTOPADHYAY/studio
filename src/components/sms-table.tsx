@@ -48,31 +48,26 @@ export function SmsTable({ records, isLoading }: SmsTableProps) {
   const { toast } = useToast();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const handleCopyCode = (code: string) => {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(code).then(() => {
-            toast({ title: 'Code Copied!' });
-            setCopiedCode(code);
-            setTimeout(() => setCopiedCode(null), 2000);
-        }).catch(() => {
-            toast({ 
-                variant: 'destructive', 
-                title: 'Failed to copy'
-            });
-        });
-    } else {
-        // Fallback for insecure contexts (HTTP)
+  const handleCopyCode = async (code: string) => {
+    try {
+        await navigator.clipboard.writeText(code);
+        toast({ title: 'Code Copied!' });
+        setCopiedCode(code);
+        setTimeout(() => setCopiedCode(null), 2000);
+    } catch (error) {
+        // Fallback for insecure contexts or permission errors
         try {
             const textArea = document.createElement("textarea");
             textArea.value = code;
             textArea.style.top = "0";
             textArea.style.left = "0";
             textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
 
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-
+            
             const successful = document.execCommand('copy');
             document.body.removeChild(textArea);
             
@@ -87,7 +82,7 @@ export function SmsTable({ records, isLoading }: SmsTableProps) {
             toast({
                 variant: 'destructive',
                 title: 'Failed to copy',
-                description: 'Your browser does not support copying to the clipboard.',
+                description: 'Your browser may not support this feature.',
             });
         }
     }

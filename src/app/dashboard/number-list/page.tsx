@@ -18,23 +18,21 @@ const NumberItem = ({ number, isHighlighted }: { number: string, isHighlighted: 
     const { toast } = useToast();
     const [copied, setCopied] = useState(false);
 
-    const handleCopy = (numberToCopy: string) => {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(numberToCopy).then(() => {
-                toast({ title: 'Copied!' });
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-            }).catch(() => {
-                toast({ variant: 'destructive', title: 'Failed to copy' });
-            });
-        } else {
-            // Fallback for insecure contexts (HTTP)
+    const handleCopy = async (numberToCopy: string) => {
+        try {
+            await navigator.clipboard.writeText(numberToCopy);
+            toast({ title: 'Copied!' });
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch (error) {
+            // Fallback for insecure contexts (HTTP) or permission errors
             try {
                 const textArea = document.createElement("textarea");
                 textArea.value = numberToCopy;
                 textArea.style.top = "0";
                 textArea.style.left = "0";
                 textArea.style.position = "fixed";
+                textArea.style.opacity = "0";
 
                 document.body.appendChild(textArea);
                 textArea.focus();
@@ -54,7 +52,7 @@ const NumberItem = ({ number, isHighlighted }: { number: string, isHighlighted: 
                 toast({
                     variant: 'destructive',
                     title: 'Failed to copy',
-                    description: 'Your browser does not support copying to the clipboard.',
+                    description: 'Your browser may not support this feature.',
                 });
             }
         }
