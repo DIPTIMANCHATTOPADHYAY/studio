@@ -1,3 +1,4 @@
+
 'use server';
 
 import { cookies } from 'next/headers';
@@ -58,7 +59,7 @@ export async function signup(values: z.infer<typeof signupSchema>) {
             name: values.name,
             email: values.email,
             password: hashedPassword,
-            status: 'active',
+            status: 'inactive',
             isAdmin: false,
         });
 
