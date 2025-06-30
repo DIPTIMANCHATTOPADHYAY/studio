@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/contexts/auth-context';
@@ -11,6 +12,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: settings.siteName,
     description: `Inspect and analyze SMS data with AI on ${settings.siteName}`,
+    icons: {
+      icon: [],
+      shortcut: [],
+      apple: [],
+      other: [],
+    },
   };
 }
 

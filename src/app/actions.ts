@@ -219,7 +219,6 @@ export async function fetchSmsData(
         phone: headers.indexOf('b-number'),
         mccMnc: headers.indexOf('mcc/mnc'),
         destination: headers.indexOf('destination'),
-        range: headers.indexOf('range'),
         rate: headers.indexOf('rate'),
         currency: headers.indexOf('currency'),
         message: headers.indexOf('message'),
@@ -243,7 +242,6 @@ export async function fetchSmsData(
             phone: parts[columnMap.phone!],
             mccMnc: parts[columnMap.mccMnc!],
             destination: parts[columnMap.destination!],
-            range: parts[columnMap.range!],
             rate: parts[columnMap.rate!],
             currency: parts[columnMap.currency!],
             message: message,
@@ -384,11 +382,14 @@ export async function fetchAccessListData(
 }
 
 // --- Auth Actions ---
+function isSecureEnvironment() {
+    return process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP !== 'true';
+}
 
 function setAuthCookie(token: string) {
     cookies().set('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP !== 'true',
+      secure: isSecureEnvironment(),
       sameSite: 'strict',
       maxAge: 60 * 60 * 24, // 1 day
       path: '/',
@@ -398,13 +399,10 @@ function setAuthCookie(token: string) {
 export async function getSignupStatus() {
     try {
         await connectDB();
-        // Use fetch with no-cache option to ensure we get the latest value
-        const signupSetting = await Setting.findOne({ key: 'signupEnabled' }).lean().exec();
-        // Be explicit: only if the value is exactly `true` is it enabled.
+        const signupSetting = await Setting.findOne({ key: 'signupEnabled' }, {}, { cache: 'no-store' }).lean().exec();
         return { signupEnabled: signupSetting?.value === true };
     } catch (error) {
         console.error("Error fetching signup status:", error);
-        // Default to false on error for security.
         return { signupEnabled: false };
     }
 }
@@ -786,29 +784,29 @@ const adminLoginSchema = z.object({
 });
 
 export async function adminLogin(values: z.infer<typeof adminLoginSchema>) {
-  const adminUsername = process.env.ADMIN_USERNAME;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (!adminUsername || !adminPassword) {
-      return { error: 'Admin credentials are not configured on the server. Please contact the system administrator.' };
-  }
+    if (!adminUsername || !adminPassword) {
+        return { error: 'Admin credentials are not configured on the server. Please check the environment variables.' };
+    }
 
-  if (values.username === adminUsername && values.password === adminPassword) {
-    cookies().set('admin_session', 'true', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP !== 'true',
-      sameSite: 'strict',
-      maxAge: 60 * 60, // 1 hour
-      path: '/',
-    });
-    return { success: true };
-  }
-  return { error: 'Invalid admin credentials.' };
+    if (values.username === adminUsername && values.password === adminPassword) {
+        cookies().set('admin_session', 'true', {
+            httpOnly: true,
+            secure: isSecureEnvironment(),
+            sameSite: 'strict',
+            maxAge: 60 * 60, // 1 hour
+            path: '/',
+        });
+        return { success: true };
+    }
+    return { error: 'Invalid admin credentials.' };
 }
+
 
 export async function adminLogout() {
   cookies().delete('admin_session');
-  cookies().delete('token');
   redirect('/');
 }
 
@@ -879,5 +877,3 @@ export async function addPrivateNumbersToUser(userId: string, numbers: string): 
         return { error: (error as Error).message };
     }
 }
-
-    

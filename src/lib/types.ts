@@ -12,7 +12,6 @@ export interface SmsRecord {
   phone: string;
   mccMnc: string;
   destination: string;
-  range: string;
   rate: number | string;
   currency: string;
   message: string;
