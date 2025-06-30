@@ -399,7 +399,7 @@ function setAuthCookie(token: string) {
 export async function getSignupStatus() {
     try {
         await connectDB();
-        const signupSetting = await Setting.findOne({ key: 'signupEnabled' }, {}, { cache: 'no-store' }).lean().exec();
+        const signupSetting = await Setting.findOne({ key: 'signupEnabled' }).lean().exec();
         return { signupEnabled: signupSetting?.value === true };
     } catch (error) {
         console.error("Error fetching signup status:", error);
@@ -623,6 +623,13 @@ export async function getPublicSettings(): Promise<PublicSettings> {
 
 
 // --- Admin Actions ---
+async function ensureAdmin() {
+  const user = await getCurrentUser();
+  if (!user || !user.isAdmin) {
+    throw new Error('Unauthorized: Admin access required.');
+  }
+}
+
 async function testProxy(proxy: ProxySettings): Promise<boolean> {
   if (!proxy.ip || !proxy.port) {
     return true; // No proxy to test, so we can save this "empty" configuration.
@@ -705,6 +712,7 @@ export async function getAdminSettings(): Promise<Partial<AdminSettings> & { err
 
 export async function updateAdminSettings(settings: Partial<AdminSettings>) {
     try {
+        await ensureAdmin();
         await connectDB();
         const operations = [];
 
@@ -748,6 +756,7 @@ export async function updateAdminSettings(settings: Partial<AdminSettings>) {
 
 export async function getAllUsers(): Promise<{ users?: UserProfile[], error?: string }> {
     try {
+        await ensureAdmin();
         await connectDB();
         const users = await User.find({}).select('-password');
         const formattedUsers: UserProfile[] = users.map(user => ({
@@ -769,6 +778,7 @@ export async function getAllUsers(): Promise<{ users?: UserProfile[], error?: st
 
 export async function toggleUserStatus(id: string, status: 'active' | 'blocked') {
     try {
+        await ensureAdmin();
         await connectDB();
         await User.findByIdAndUpdate(id, { status });
         revalidatePath('/admin');
@@ -780,6 +790,7 @@ export async function toggleUserStatus(id: string, status: 'active' | 'blocked')
 
 export async function toggleCanManageNumbers(userId: string, canManage: boolean) {
     try {
+        await ensureAdmin();
         await connectDB();
         await User.findByIdAndUpdate(userId, { canManageNumbers: canManage });
         revalidatePath('/admin');
@@ -847,6 +858,7 @@ export async function getCombinedNumberList(): Promise<{ publicNumbers: string[]
 
 export async function addPrivateNumbersToUser(userId: string, numbers: string): Promise<{ success?: boolean; error?: string; addedCount?: number, newList?: string[] }> {
     try {
+        await ensureAdmin();
         await connectDB();
         
         const user = await User.findById(userId);
@@ -891,6 +903,7 @@ export async function addPrivateNumbersToUser(userId: string, numbers: string): 
 
 export async function removePrivateNumbersFromUser(userId: string, numbersToRemove: string[] | 'all'): Promise<{ success?: boolean; error?: string; newList?: string[] }> {
     try {
+        await ensureAdmin();
         await connectDB();
         
         const user = await User.findById(userId);
@@ -925,64 +938,98 @@ export async function removePrivateNumbersFromUser(userId: string, numbersToRemo
 
 
 // --- User-facing number management ---
-export async function addUserPrivateNumber(number: string): Promise<{ success?: boolean; error?: string; newList?: string[] }> {
+export async function addPublicNumbers(numbers: string): Promise<{ success?: boolean; error?: string; addedCount?: number, newList?: string[] }> {
     try {
         const user = await getCurrentUser();
         if (!user) return { error: 'User not authenticated.' };
         if (!user.canManageNumbers) return { error: 'You do not have permission to manage numbers.' };
 
+        const numbersToAdd = numbers
+            .split('\n')
+            .map(n => n.trim())
+            .filter(n => n);
+
+        if (numbersToAdd.length === 0) {
+            return { error: 'Please provide at least one number.' };
+        }
+        
         await connectDB();
-        
-        const dbUser = await User.findById(user.id);
-        if (!dbUser) return { error: 'User not found.' };
+        const numberListSetting = await Setting.findOne({ key: 'numberList' });
+        const currentPublicList = numberListSetting?.value ?? [];
 
-        const trimmedNumber = number.trim();
-        if (!trimmedNumber) return { error: 'Number cannot be empty.' };
+        const currentPublicListSet = new Set(currentPublicList);
+        const uniqueNewNumbers = [...new Set(numbersToAdd)].filter(num => !currentPublicListSet.has(num));
 
-        if (!dbUser.privateNumberList) {
-            dbUser.privateNumberList = [];
+        if (uniqueNewNumbers.length === 0) {
+            return { error: 'All provided numbers are already in the public list.' };
         }
         
-        if (dbUser.privateNumberList.includes(trimmedNumber)) {
-            return { error: 'This number is already in your private list.' };
-        }
-
-        await User.updateOne(
-            { _id: user.id },
-            { $push: { privateNumberList: trimmedNumber } }
+        const newList = [...currentPublicList, ...uniqueNewNumbers];
+        
+        await Setting.updateOne(
+            { key: 'numberList' },
+            { value: newList },
+            { upsert: true }
         );
 
-        const updatedUser = await User.findById(user.id);
         revalidatePath('/dashboard/number-list');
-        return { success: true, newList: updatedUser?.privateNumberList ?? [] };
+        return { success: true, addedCount: uniqueNewNumbers.length, newList };
 
     } catch (error) {
         return { error: (error as Error).message };
     }
 }
 
-export async function removeUserPrivateNumbers(numbersToRemove: string[]): Promise<{ success?: boolean; error?: string, newList?: string[] }> {
-    try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'User not authenticated.' };
-        if (!user.canManageNumbers) return { error: 'You do not have permission to manage numbers.' };
+// --- New Admin User Management Functions ---
+const adminCreateUserSchema = z.object({
+  name: z.string().min(2, { message: 'Name is required.'}),
+  email: z.string().email(),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters.'}),
+});
 
-        await connectDB();
-        
-        if (numbersToRemove.length === 0) {
-            return { error: 'Please select at least one number to remove.' };
-        }
-        await User.updateOne(
-            { _id: user.id },
-            { $pull: { privateNumberList: { $in: numbersToRemove } } }
-        );
-       
-       const updatedUser = await User.findById(user.id);
-
-       revalidatePath('/dashboard/number-list');
-       return { success: true, newList: updatedUser?.privateNumberList ?? [] };
-
-    } catch (error) {
-        return { error: (error as Error).message };
+export async function adminCreateUser(values: z.infer<typeof adminCreateUserSchema>) {
+  try {
+    await ensureAdmin();
+    await connectDB();
+    
+    const existingUser = await User.findOne({ email: values.email });
+    if (existingUser) {
+        return { error: 'User with this email already exists.' };
     }
+    
+    const hashedPassword = await bcrypt.hash(values.password, 10);
+
+    await User.create({
+        name: values.name,
+        email: values.email,
+        password: hashedPassword,
+        status: 'active',
+        isAdmin: false,
+    });
+    
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+}
+
+const adminResetPasswordSchema = z.object({
+  userId: z.string(),
+  password: z.string().min(8, { message: 'New password must be at least 8 characters.'}),
+});
+
+export async function adminResetUserPassword(values: z.infer<typeof adminResetPasswordSchema>) {
+  try {
+    await ensureAdmin();
+    await connectDB();
+    
+    const hashedPassword = await bcrypt.hash(values.password, 10);
+    
+    await User.findByIdAndUpdate(values.userId, { password: hashedPassword });
+    
+    return { success: true };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
 }

@@ -2,11 +2,15 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, Trash2 } from 'lucide-react';
-import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser, toggleCanManageNumbers } from '@/app/actions';
+import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, Trash2, UserPlus, Key } from 'lucide-react';
+import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser, toggleCanManageNumbers, adminCreateUser, adminResetUserPassword } from '@/app/actions';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,23 +24,48 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+
+
+const createUserSchema = z.object({
+  name: z.string().min(2, { message: 'Name is required.'}),
+  email: z.string().email(),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters.'}),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(8, { message: 'New password must be at least 8 characters.'}),
+});
+
 
 export function UserManagementTab() {
     const { toast } = useToast();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // State for the private number management modal
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isNumbersModalOpen, setIsNumbersModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [privateNumbersToAdd, setPrivateNumbersToAdd] = useState('');
     const [isAddingNumbers, setIsAddingNumbers] = useState(false);
     const [numbersToRemove, setNumbersToRemove] = useState<string[]>([]);
     const [isRemovingNumbers, setIsRemovingNumbers] = useState(false);
+    
+    const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+    const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+
+    const createUserForm = useForm<z.infer<typeof createUserSchema>>({
+        resolver: zodResolver(createUserSchema),
+        defaultValues: { name: '', email: '', password: '' },
+    });
+
+    const resetPasswordForm = useForm<z.infer<typeof resetPasswordSchema>>({
+        resolver: zodResolver(resetPasswordSchema),
+        defaultValues: { password: '' },
+    });
 
 
     const fetchUsers = async () => {
@@ -83,8 +112,8 @@ export function UserManagementTab() {
     const openManageNumbersModal = (user: UserProfile) => {
         setSelectedUser(user);
         setPrivateNumbersToAdd('');
-        setNumbersToRemove([]); // Reset selection when opening modal
-        setIsModalOpen(true);
+        setNumbersToRemove([]);
+        setIsNumbersModalOpen(true);
     };
 
     const handleAddPrivateNumbers = async () => {
@@ -98,14 +127,13 @@ export function UserManagementTab() {
             toast({ variant: 'destructive', title: 'Failed to add numbers', description: result.error });
         } else {
             toast({ title: 'Private Numbers Added', description: `${result.addedCount} new numbers added for ${selectedUser.name}.`});
-            // Update the user list locally to reflect changes immediately
             setUsers(currentUsers =>
                 currentUsers.map(u =>
                     u.id === selectedUser.id ? { ...u, privateNumberList: result.newList } : u
                 )
             );
             setSelectedUser(prev => prev ? { ...prev, privateNumberList: result.newList } : null);
-            setPrivateNumbersToAdd(''); // Clear the textarea
+            setPrivateNumbersToAdd('');
         }
     };
 
@@ -145,13 +173,47 @@ export function UserManagementTab() {
         }
     };
 
+    const handleCreateUser = async (values: z.infer<typeof createUserSchema>) => {
+        const result = await adminCreateUser(values);
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Failed to create user', description: result.error });
+        } else {
+            toast({ title: 'User Created Successfully' });
+            setIsCreateUserModalOpen(false);
+            createUserForm.reset();
+            fetchUsers();
+        }
+    };
+
+    const handleResetPassword = async (values: z.infer<typeof resetPasswordSchema>) => {
+        if (!selectedUser) return;
+        const result = await adminResetUserPassword({ userId: selectedUser.id, password: values.password });
+         if (result.error) {
+            toast({ variant: 'destructive', title: 'Failed to reset password', description: result.error });
+        } else {
+            toast({ title: 'Password Reset Successfully' });
+            setIsResetPasswordModalOpen(false);
+            resetPasswordForm.reset();
+        }
+    }
+
+    const openResetPasswordModal = (user: UserProfile) => {
+        setSelectedUser(user);
+        setIsResetPasswordModalOpen(true);
+    }
 
     return (
         <>
             <Card>
-                <CardHeader>
-                    <CardTitle>User Management</CardTitle>
-                    <CardDescription>View and manage all registered users and their permissions.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>User Management</CardTitle>
+                        <CardDescription>View and manage all registered users and their permissions.</CardDescription>
+                    </div>
+                    <Button onClick={() => setIsCreateUserModalOpen(true)}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Create User
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -203,10 +265,12 @@ export function UserManagementTab() {
                                                 <Label htmlFor={`can-manage-${user.id}`} className="text-sm text-muted-foreground whitespace-nowrap">Can Add Numbers</Label>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right space-x-2">
+                                        <TableCell className="text-right space-x-1">
                                             <Button variant="outline" size="sm" onClick={() => openManageNumbersModal(user)} disabled={user.isAdmin}>
-                                                <ListPlus className="h-4 w-4 mr-2"/>
-                                                Manage Numbers
+                                                <ListPlus className="h-4 w-4"/>
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => openResetPasswordModal(user)} disabled={user.isAdmin}>
+                                                <Key className="h-4 w-4"/>
                                             </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user)} disabled={user.isAdmin}>
                                                 {user.status === 'active' ? <ShieldBan className="h-4 w-4 text-destructive" /> : <ShieldCheck className="h-4 w-4 text-green-600" />}
@@ -221,7 +285,8 @@ export function UserManagementTab() {
                 </CardContent>
             </Card>
 
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            {/* Manage Private Numbers Dialog */}
+            <Dialog open={isNumbersModalOpen} onOpenChange={setIsNumbersModalOpen}>
                 <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Manage Private Numbers for {selectedUser?.name}</DialogTitle>
@@ -299,6 +364,96 @@ export function UserManagementTab() {
                             <Button type="button" variant="secondary" disabled={isAddingNumbers || isRemovingNumbers}>Close</Button>
                         </DialogClose>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Create User Dialog */}
+            <Dialog open={isCreateUserModalOpen} onOpenChange={setIsCreateUserModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Create New User</DialogTitle>
+                        <DialogDescription>
+                            Create a new user account with a name, email, and password.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Form {...createUserForm}>
+                        <form onSubmit={createUserForm.handleSubmit(handleCreateUser)} className="space-y-4">
+                            <FormField
+                                control={createUserForm.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name</FormLabel>
+                                        <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={createUserForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl><Input type="email" placeholder="name@example.com" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={createUserForm.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Password</FormLabel>
+                                        <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                                <Button type="submit" disabled={createUserForm.formState.isSubmitting}>
+                                    {createUserForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                    Create User
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reset Password Dialog */}
+            <Dialog open={isResetPasswordModalOpen} onOpenChange={setIsResetPasswordModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                            Enter a new password for <span className="font-semibold">{selectedUser?.name}</span> ({selectedUser?.email}).
+                        </DialogDescription>
+                    </DialogHeader>
+                     <Form {...resetPasswordForm}>
+                        <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
+                            <FormField
+                                control={resetPasswordForm.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>New Password</FormLabel>
+                                        <FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                                <Button type="submit" disabled={resetPasswordForm.formState.isSubmitting}>
+                                    {resetPasswordForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                    Reset Password
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
                 </DialogContent>
             </Dialog>
         </>
