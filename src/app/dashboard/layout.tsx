@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -43,7 +44,6 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     await logout();
-    await refreshUser(); 
   };
 
   if (loading || !user) {

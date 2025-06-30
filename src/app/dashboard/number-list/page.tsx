@@ -17,6 +17,14 @@ const NumberItem = ({ number }: { number: string }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = (numberToCopy: string) => {
+        if (!navigator.clipboard) {
+            toast({
+                variant: 'destructive',
+                title: 'Copy Not Supported',
+                description: 'Your browser does not support the Clipboard API.',
+            });
+            return;
+        }
         navigator.clipboard.writeText(numberToCopy).then(() => {
             toast({ title: 'Copied!' });
             setCopied(true);
