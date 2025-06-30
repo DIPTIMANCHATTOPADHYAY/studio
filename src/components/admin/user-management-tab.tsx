@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,7 +82,7 @@ export function UserManagementTab() {
     });
 
 
-    const fetchUsers = async () => {
+    const fetchUsers = useCallback(async () => {
         setIsLoading(true);
         const result = await getAllUsers();
         if (result.error) {
@@ -91,12 +91,11 @@ export function UserManagementTab() {
             setUsers(result.users || []);
         }
         setIsLoading(false);
-    };
+    }, [toast]);
 
     useEffect(() => {
         fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [fetchUsers]);
 
     const handleToggleStatus = async (user: UserProfile) => {
         const newStatus = user.status === 'active' ? 'blocked' : 'active';

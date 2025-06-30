@@ -17,21 +17,45 @@ const NumberItem = ({ number }: { number: string }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = (numberToCopy: string) => {
-        if (!navigator.clipboard) {
-            toast({
-                variant: 'destructive',
-                title: 'Copy Not Supported',
-                description: 'Your browser does not support the Clipboard API.',
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(numberToCopy).then(() => {
+                toast({ title: 'Copied!' });
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+            }).catch(() => {
+                toast({ variant: 'destructive', title: 'Failed to copy' });
             });
-            return;
+        } else {
+            // Fallback for insecure contexts (HTTP)
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = numberToCopy;
+                textArea.style.top = "0";
+                textArea.style.left = "0";
+                textArea.style.position = "fixed";
+
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (successful) {
+                    toast({ title: 'Copied!' });
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                } else {
+                    throw new Error('Fallback copy failed');
+                }
+            } catch (err) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to copy',
+                    description: 'Your browser does not support copying to the clipboard.',
+                });
+            }
         }
-        navigator.clipboard.writeText(numberToCopy).then(() => {
-            toast({ title: 'Copied!' });
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-        }).catch(() => {
-            toast({ variant: 'destructive', title: 'Failed to copy' });
-        });
     };
 
     return (

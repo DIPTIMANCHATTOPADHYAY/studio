@@ -48,17 +48,48 @@ export function SmsTable({ records, isLoading }: SmsTableProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code).then(() => {
-      toast({ title: 'Code Copied!' });
-      setCopiedCode(code);
-      setTimeout(() => setCopiedCode(null), 2000);
-    }).catch(err => {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Failed to copy',
-        description: 'Could not copy to clipboard. This can be due to browser permissions or an insecure (HTTP) connection.'
-      });
-    });
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => {
+            toast({ title: 'Code Copied!' });
+            setCopiedCode(code);
+            setTimeout(() => setCopiedCode(null), 2000);
+        }).catch(() => {
+            toast({ 
+                variant: 'destructive', 
+                title: 'Failed to copy'
+            });
+        });
+    } else {
+        // Fallback for insecure contexts (HTTP)
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = code;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                toast({ title: 'Code Copied!' });
+                setCopiedCode(code);
+                setTimeout(() => setCopiedCode(null), 2000);
+            } else {
+                throw new Error('Fallback copy failed');
+            }
+        } catch (err) {
+            toast({
+                variant: 'destructive',
+                title: 'Failed to copy',
+                description: 'Your browser does not support copying to the clipboard.',
+            });
+        }
+    }
   }
 
   if (isLoading) {
