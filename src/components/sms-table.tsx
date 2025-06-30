@@ -15,6 +15,7 @@ import type { SmsRecord } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SmsTableProps {
   records: SmsRecord[];
@@ -132,7 +133,9 @@ export function SmsTable({ records, isLoading }: SmsTableProps) {
                     <TableCell className="font-medium whitespace-nowrap align-top">{record.dateTime}</TableCell>
                     <TableCell className="whitespace-nowrap align-top">{record.senderId}</TableCell>
                     <TableCell className="align-top">
-                        <div>{record.phone}</div>
+                        <div className={cn({
+                            "font-semibold text-green-600 dark:text-green-500": record.extractedInfo?.confirmationCode,
+                        })}>{record.phone}</div>
                         {record.extractedInfo?.confirmationCode && (
                           <div 
                             className="inline-flex items-center gap-2 cursor-pointer rounded-md bg-primary/10 px-2 py-1 mt-2 text-primary transition-colors hover:bg-primary/20"
