@@ -1000,3 +1000,86 @@ export async function adminResetUserPassword(values: z.infer<typeof adminResetPa
     return { error: (error as Error).message };
   }
 }
+
+export async function adminDeleteUser(userId: string) {
+  try {
+    await ensureAdmin();
+    const currentUser = await getCurrentUser();
+    if (currentUser?.id === userId) {
+        return { error: 'Administrators cannot delete their own account.' };
+    }
+    
+    await connectDB();
+    await User.findByIdAndDelete(userId);
+    
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+}
+
+const adminCredentialsSchema = z.object({
+  currentPassword: z.string().min(1, { message: "Current password is required." }),
+  newEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')),
+  newPassword: z.string().min(8, { message: 'New password must be at least 8 characters.'}).optional().or(z.literal('')),
+}).refine(data => data.newEmail || data.newPassword, {
+  message: "You must provide either a new email or a new password.",
+  path: ["newEmail"],
+});
+
+
+export async function updateAdminCredentials(values: z.infer<typeof adminCredentialsSchema>) {
+    try {
+        const validation = adminCredentialsSchema.safeParse(values);
+        if (!validation.success) {
+            return { error: validation.error.errors.map(e => e.message).join(' ') };
+        }
+
+        const user = await getCurrentUser();
+        if (!user || !user.isAdmin) {
+            throw new Error('Unauthorized: Admin access required.');
+        }
+        
+        await connectDB();
+        const adminUser = await User.findById(user.id);
+        if (!adminUser || !adminUser.password) {
+             return { error: 'Admin account not found or has no password set.' };
+        }
+
+        const isPasswordValid = await bcrypt.compare(values.currentPassword, adminUser.password);
+        if (!isPasswordValid) {
+            return { error: 'The current password you entered is incorrect.' };
+        }
+
+        const updates: { email?: string; password?: string } = {};
+
+        if (values.newEmail && values.newEmail !== adminUser.email) {
+            const existingUser = await User.findOne({ email: values.newEmail });
+            if (existingUser) {
+                return { error: 'This email address is already in use.' };
+            }
+            updates.email = values.newEmail;
+        }
+
+        if (values.newPassword) {
+            updates.password = await bcrypt.hash(values.newPassword, 10);
+        }
+
+        await User.findByIdAndUpdate(user.id, updates);
+        
+        if (updates.email) {
+            const token = jwt.sign(
+              { userId: adminUser._id, isAdmin: adminUser.isAdmin, status: adminUser.status },
+              process.env.JWT_SECRET!,
+              { expiresIn: '1d' }
+            );
+            setAuthCookie(token);
+        }
+
+        return { success: true };
+
+    } catch (error) {
+        return { error: (error as Error).message };
+    }
+}

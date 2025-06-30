@@ -3,13 +3,27 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import { getAdminSettings, updateAdminSettings } from '@/app/actions';
+import { getAdminSettings, updateAdminSettings, updateAdminCredentials } from '@/app/actions';
 import type { ProxySettings } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const adminCredentialsSchema = z.object({
+  currentPassword: z.string().min(1, { message: "Current password is required." }),
+  newEmail: z.string().email({ message: "Please enter a valid email." }).optional().or(z.literal('')),
+  newPassword: z.string().min(8, { message: 'New password must be at least 8 characters.'}).optional().or(z.literal('')),
+}).refine(data => !!data.newEmail || !!data.newPassword, {
+  message: "You must provide either a new email or a new password.",
+  path: ["newEmail"],
+});
+
 
 export function SettingsTab() {
     const { toast } = useToast();
@@ -18,6 +32,11 @@ export function SettingsTab() {
     const [signupEnabled, setSignupEnabled] = useState(true);
     const [emailChangeEnabled, setEmailChangeEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
+
+    const adminForm = useForm<z.infer<typeof adminCredentialsSchema>>({
+        resolver: zodResolver(adminCredentialsSchema),
+        defaultValues: { currentPassword: '', newEmail: '', newPassword: '' },
+    });
     
     useEffect(() => {
         async function loadSettings() {
@@ -51,8 +70,70 @@ export function SettingsTab() {
         setIsLoading(false);
     };
 
+    const handleAdminUpdate = async (values: z.infer<typeof adminCredentialsSchema>) => {
+        const result = await updateAdminCredentials(values);
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: result.error });
+        } else {
+            toast({ title: 'Admin Credentials Updated', description: 'You may need to log in again if you changed your email.' });
+            adminForm.reset();
+        }
+    }
+
     return (
         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Administrator Account</CardTitle>
+                    <CardDescription>Change the email or password for the primary admin account.</CardDescription>
+                </CardHeader>
+                <Form {...adminForm}>
+                    <form onSubmit={adminForm.handleSubmit(handleAdminUpdate)}>
+                        <CardContent className="space-y-4">
+                            <FormField
+                                control={adminForm.control}
+                                name="currentPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Current Password</FormLabel>
+                                        <FormControl><Input type="password" placeholder="Enter your current password" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={adminForm.control}
+                                name="newEmail"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>New Admin Email (Optional)</FormLabel>
+                                        <FormControl><Input type="email" placeholder="new.admin@example.com" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={adminForm.control}
+                                name="newPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>New Admin Password (Optional)</FormLabel>
+                                        <FormControl><Input type="password" placeholder="Enter a new secure password" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                        <CardFooter className="justify-end">
+                            <Button type="submit" disabled={adminForm.formState.isSubmitting}>
+                                {adminForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                Update Admin Credentials
+                            </Button>
+                        </CardFooter>
+                    </form>
+                </Form>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>User & Access Policies</CardTitle>

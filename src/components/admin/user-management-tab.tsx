@@ -5,12 +5,12 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, ShieldBan, ShieldCheck, ListPlus, Trash2, UserPlus, Key } from 'lucide-react';
-import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser, toggleCanManageNumbers, adminCreateUser, adminResetUserPassword } from '@/app/actions';
+import { getAllUsers, toggleUserStatus, addPrivateNumbersToUser, removePrivateNumbersFromUser, toggleCanManageNumbers, adminCreateUser, adminResetUserPassword, adminDeleteUser } from '@/app/actions';
 import type { UserProfile } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +24,16 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -56,6 +66,7 @@ export function UserManagementTab() {
     
     const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
     const createUserForm = useForm<z.infer<typeof createUserSchema>>({
         resolver: zodResolver(createUserSchema),
@@ -199,8 +210,21 @@ export function UserManagementTab() {
 
     const openResetPasswordModal = (user: UserProfile) => {
         setSelectedUser(user);
+        resetPasswordForm.reset();
         setIsResetPasswordModalOpen(true);
     }
+    
+    const handleDeleteUser = async () => {
+        if (!userToDelete) return;
+        const result = await adminDeleteUser(userToDelete.id);
+        if (result.error) {
+            toast({ variant: 'destructive', title: 'Failed to delete user', description: result.error });
+        } else {
+            toast({ title: 'User Deleted Successfully' });
+            fetchUsers();
+        }
+        setUserToDelete(null);
+    };
 
     return (
         <>
@@ -274,6 +298,9 @@ export function UserManagementTab() {
                                             </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user)} disabled={user.isAdmin}>
                                                 {user.status === 'active' ? <ShieldBan className="h-4 w-4 text-destructive" /> : <ShieldCheck className="h-4 w-4 text-green-600" />}
+                                            </Button>
+                                             <Button variant="ghost" size="icon" onClick={() => setUserToDelete(user)} disabled={user.isAdmin}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -456,6 +483,24 @@ export function UserManagementTab() {
                     </Form>
                 </DialogContent>
             </Dialog>
+            
+            {/* Delete User Dialog */}
+            <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the account for <span className="font-bold">{userToDelete?.name}</span> ({userToDelete?.email}). All associated data will be lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: 'destructive' })}>
+                            Yes, Delete User
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

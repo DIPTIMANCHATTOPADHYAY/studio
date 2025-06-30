@@ -63,19 +63,24 @@ const defaultSettings: { [key: string]: any } = {
 async function seedDatabase() {
     try {
         // Seed Admin User
-        const adminEmail = 'admin@example.com';
-        const adminExists = await User.findOne({ email: adminEmail });
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
 
-        if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('admin', 10);
-            await User.create({
-                name: 'Admin',
-                email: adminEmail,
-                password: hashedPassword,
-                isAdmin: true,
-                status: 'active',
-            });
-            console.log('Default admin user created.');
+        if (!adminEmail || !adminPassword) {
+            console.warn('ADMIN_EMAIL or ADMIN_PASSWORD not set in .env. Skipping default admin creation. Please set them for production.');
+        } else {
+            const adminExists = await User.findOne({ email: adminEmail });
+            if (!adminExists) {
+                const hashedPassword = await bcrypt.hash(adminPassword, 10);
+                await User.create({
+                    name: 'Admin',
+                    email: adminEmail,
+                    password: hashedPassword,
+                    isAdmin: true,
+                    status: 'active',
+                });
+                console.log('Default admin user created.');
+            }
         }
         
         // Seed all settings from defaultSettings object
